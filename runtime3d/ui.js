@@ -77,6 +77,7 @@ export class UI {
       btn('craft', ic('craft') + '<small>Крафт</small>' + kbd('C'), 'icon', () => this.toggle('craft')),
       btn('inv', icc('g-suit') + '<small>Снаряж.</small>' + kbd('I') + '<i class="cnt" id="slots"></i>', 'icon', () => this.toggle('inv')),
       btn('house', ic('house') + '<small>Стройка</small>' + kbd('B'), 'icon', () => this.toggle('house')),
+      btn('daily', ic('gift') + '<small>Награды</small>' + kbd('K'), 'icon', () => this.toggle('daily')),
       btn('life', ic('paw') + '<small>Род</small>' + kbd('L'), 'icon', () => this.toggle('life')),
       btn('store', ic('store') + '<small>Магазин</small>', 'icon', () => this.toggle('store')),
     );
@@ -84,6 +85,7 @@ export class UI {
     this.el('pills').append(btn('x2', `${ic('pick')} x2 добыча ${ic('ad')}`, 'pill ad', () => g.rewardDoubleMine()));
     this.el('o2box').append(btn('o2ad', `${ic('o2')} Заправить ${ic('ad')}`, 'pill ad', () => g.rewardO2()));
     this.root.append(btn('settings', ic('settings'), 'icon', () => this.toggle('settings')));
+    { const d = btn('dev', 'DEV', 'icon devbtn', () => this.toggle('dev')); this.root.append(d); }
     this.el('close').addEventListener('pointerdown', e => { e.stopPropagation(); this.close(); });
     this.buttons.close = this.el('close');
     // Сворачивание блоков Ti / Рода (запоминается)
@@ -98,11 +100,14 @@ export class UI {
     addEventListener('keydown', e => {
       // Игровые клавиши (прыжок/ходьба стрелками) не должны листать открытую панель браузером
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.code) && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) e.preventDefault();
+      if (e.code === 'KeyE' && !g.placing && (g.driving || g.nearVehicle())) { g.toggleDrive(); return; }
       if (e.code === 'KeyE') { if (g.placing) { if (!g.confirmPlace() && !g.placing?.builder) this.toast('Здесь нельзя: ' + (g.placeWhy || 'нужно ровное место'), 'warn'); } else if (g.nearFeeder && g.life.foodCap() && g.life.L.food < g.life.foodCap() - 1) g.life.fillFeeder(); else if (g.life.nearest && g.life.petReady(g.life.nearest) && !g.target) g.life.pet(g.life.nearest); else if (g.explore.nearC) g.explore.openContainer(g.explore.nearC); else if (g.nearMeteor) g.openMeteor(); else if (g.nearStash) { if (this.panel !== 'stash') this.stashSt = g.nearStash; this.toggle('stash'); } else if (g.target) g.startMine(g.target); }
       if (e.code === 'KeyF' && !this.panel) g.explore.placeLamp();
       if (e.code === 'KeyQ' && (g.state.inv.o2_tank || 0) > 0) g.use('o2_tank');
       if (e.code === 'KeyG' || e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); this.toggle('inv'); }
       if (e.code === 'KeyL') this.toggle('life');
+      if (e.code === 'F9') { e.preventDefault(); this.toggle('dev'); }
+      if (e.code === 'KeyK') this.toggle('daily');
       if (e.code === 'KeyB') this.toggle('house');
       if (e.code === 'KeyR' && g.builder.mode) g.builder.rotate();
       if (e.code === 'KeyX' && !this.panel) g.builder.removeNear();
@@ -247,9 +252,9 @@ export class UI {
     if (this.panel !== name) body.scrollTop = 0;
     this.panel = name;
     this.el('panel').style.display = 'flex';
-    const [i, t, c] = { craft: [ic('craft'), this.g.state?.baseDome ? this.T.craft : 'Сборка'], inv: [icc('g-suit'), 'Снаряжение', 'var(--sky)'], store: [ic('store'), this.T.store, 'var(--mint)'], life: [ic('paw'), 'Род фенеков', 'var(--mint)'], settings: [ic('settings'), 'Настройки · пауза', 'var(--cocoa-3)'], stash: [ic('crate'), this.g.nearStash?.name || 'Ящик', 'var(--sand)'], house: [ic('house'), 'Стройка', 'var(--sand)'] }[name];
+    const [i, t, c] = { dev: [ic('settings'), 'Дев-панель', 'var(--pink)'], daily: [ic('gift'), 'Награды за вход', 'var(--gold)'], craft: [ic('craft'), this.g.state?.baseDome ? this.T.craft : 'Сборка'], inv: [icc('g-suit'), 'Снаряжение', 'var(--sky)'], store: [ic('store'), this.T.store, 'var(--mint)'], life: [ic('paw'), 'Род фенеков', 'var(--mint)'], settings: [ic('settings'), 'Настройки · пауза', 'var(--cocoa-3)'], stash: [ic('crate'), this.g.nearStash?.name || 'Ящик', 'var(--sand)'], house: [ic('house'), 'Стройка', 'var(--sand)'] }[name];
     this.el('ptitle').innerHTML = `<i class="ico" style="${c ? '--c:' + c : ''}">${i}</i>${t}`;
-    ({ craft: () => this.renderCraft(), inv: () => this.renderInv(), store: () => this.renderStore(), life: () => this.renderLife(), settings: () => this.renderSettings(), stash: () => this.renderStash(), house: () => this.renderHouse() })[name]();
+    ({ craft: () => this.renderCraft(), inv: () => this.renderInv(), store: () => this.renderStore(), life: () => this.renderLife(), settings: () => this.renderSettings(), dev: () => this.renderDev(), daily: () => this.renderDaily(), stash: () => this.renderStash(), house: () => this.renderHouse() })[name]();
     window.__qa.state = 'panel:' + name;
   }
   // Живая перерисовка панели без дёрганья: рендер в отвязанный div, в DOM меняем только изменившиеся строки.
@@ -509,6 +514,47 @@ export class UI {
       }
     }
   }
+  // ---------- Дев-панель (временная): выдать ресурсы, чертежи, награды календаря ----------
+  renderDev() {
+    const g = this.g, body = this.el('pbody');
+    const row = (label, fn, sub = '') => { const r = document.createElement('div'); r.className = 'row'; r.innerHTML = `<div class="rname">${label}<span class="desc">${sub}</span></div>`; r.append(this.sbtn('dev_' + label.replace(/\W+/g, '_'), 'Дать', 'ok', () => { fn(); this.toast('DEV: ' + label); this.renderDev(); })); body.append(r); };
+    body.innerHTML = `<div class="note">${ic('settings')} Временная панель разработчика (F9). В релизе её не будет.</div>`;
+    row('Чертёж: Марсоход', () => { g.state.bps.rover = 1; g.save(); }, g.state.bps?.rover ? 'уже изучен — Крафт (C) → Марсоход' : 'рецепт появится в Крафте');
+    row('Ресурсы на марсоход', () => { g.give?.({}) ; for (const [k, v] of Object.entries({ iron: 20, silicon: 8, titanium: 4, cobalt: 4 })) g.state.inv[k] = (g.state.inv[k] || 0) + v; }, '20 железа, 8 кремния, 4 титана, 4 кобальта');
+    row('Поставить марсоход рядом', () => { const r = g.cfg.recipes.find(x => x.id === 'rover'), p = g.player.pos, f = g.player.forward(); const b = { model: 'rover', recipe: 'rover', x: +(p.x + f.x * 4).toFixed(2), z: +(p.z + f.z * 4).toFixed(2), rot: g.player.obj.rotation.y }; g.state.buildings.push(b); g.spawnBuilding(b, true); g.save(); }, 'без ресурсов, сразу перед героем');
+    row('Следующий день календаря', () => { g.daily?.dev(); }, `сейчас открыто дней: ${g.state.daily?.claimed || 0}`);
+    row('Сбросить календарь', () => { g.state.daily = { claimed: 0, last: '' }; g.save(); });
+    row('+50 ко всем ресурсам', () => { for (const k of ['iron', 'silicon', 'ice', 'titanium', 'cobalt']) g.state.inv[k] = (g.state.inv[k] || 0) + 50; });
+    row('Бессмертие (O₂ не тратится)', () => { g.devDrain = g.devDrain === 0 ? 1 : 0; }, g.devDrain === 0 ? 'включено' : 'выключено');
+  }
+  // ---------- Календарь наград за вход ----------
+  renderDaily() {
+    const g = this.g, body = this.el('pbody'), D = g.cfg.daily_calendar, st = g.state.daily || { claimed: 0 };
+    body.innerHTML = `<div class="note">${ic('gift')} Каждый новый день, когда заходишь в игру, — следующая награда. Пропуски ничего не сбрасывают.</div><div class="daily"></div>`;
+    const box = body.querySelector('.daily');
+    D.forEach((d, i) => {
+      const got = i < st.claimed, next = i === st.claimed, c = document.createElement('div');
+      c.className = `dcell ${got ? 'got' : ''} ${next ? 'next' : ''} ${d.big ? 'big' : ''}`; c.dataset.i = i;
+      c.innerHTML = `<small>День ${d.day}</small><div class="dico">${d.preview === 'rover' ? ic('rocket') : d.preview === 'skin' ? ic('suit') : d.preview === 'drone' ? ic('star') : ic('gift')}</div><b>${d.title}</b><em>${got ? ic('check') + ' получено' : next ? (g.daily?.canClaim() ? 'сегодня!' : 'завтра') : ''}</em>`;
+      const show = () => { box.querySelectorAll('.dcell.hov').forEach(e => e.classList.remove('hov')); c.classList.add('hov'); this.dailyPreview(d, c); }; c.addEventListener('pointerenter', show); c.addEventListener('pointerdown', e => { e.stopPropagation(); show(); });
+      c.addEventListener('pointerleave', () => { c.classList.remove('hov'); this.dailyPreview(null); });
+      box.append(c);
+    });
+    if (g.daily?.canClaim()) { const b = this.sbtn('daily_claim', `${ic('gift')} Забрать награду дня ${st.claimed + 1}`, 'ok', () => { g.daily.claim(); this.buttons.daily?.classList.remove('pulseb'); this.renderDaily(); }); b.classList.remove('small'); body.append(b); }
+  }
+  dailyPreview(d, cell) {
+    let pv = document.getElementById('dprev'); if (!d) { if (pv) pv.style.display = 'none'; return; }
+    if (!pv) { pv = document.createElement('div'); pv.id = 'dprev'; this.el('ui').append(pv); }
+    const items = Object.entries(d.items || {}).map(([k, v]) => this.itemChip(k, v)).join('');
+    pv.innerHTML = `<div class="pvimg">${d.preview ? `<canvas width="360" height="220"></canvas>` : `<div class="pvicon">${ic('gift')}</div>`}</div><b>День ${d.day}: ${d.title}</b>${d.desc ? `<p>${d.desc}</p>` : ''}<div class="pvitems">${items}</div>`;
+    pv.style.display = 'block';
+    const z = UI.zoom || 1, P = this.el('pbody').parentElement.getBoundingClientRect(), r = cell.getBoundingClientRect(), W = innerWidth / z, H = innerHeight / z;
+    const wpv = 360; pv.style.width = wpv + 'px';
+    let x = P.right / z + 8; if (x + wpv > W - 4) x = P.left / z - wpv - 8;
+    if (x >= 4) { pv.style.left = x + 'px'; pv.style.top = Math.min(H - 350, Math.max(8, P.top / z)) + 'px'; }
+    else { pv.style.left = (P.left / z + (P.width / z - wpv) / 2) + 'px'; pv.style.top = (P.top / z + 56) + 'px'; } // узкий экран — по центру окна, под заголовком
+    if (d.preview) this.g.previewModel?.(pv.querySelector('canvas'), d.preview);
+  }
   renderSettings() {
     const S = this.settings, body = this.el('pbody');
     const range = (id, icon, label) => `<div class="set">${ic(icon)}<label for="s_${id}">${label}</label><input type="range" id="s_${id}" min="0" max="100" step="5" value="${Math.round(S[id] * 100)}"><output>${Math.round(S[id] * 100)}%</output></div>`;
@@ -569,7 +615,9 @@ export class UI {
     const g = this.g, X = g.explore, el = this.el('wtag'); if (!el || !this.camera) return;
     let t = null;
     if (!this.panel && !g.placing && !g.dead) {
-      if (X.nearC) t = { x: X.nearC.x, z: X.nearC.z, h: 1.1, txt: 'Открыть', sub: X.nearC.name };
+      if (g.driving) t = null;
+      else if (g.nearVehicle()) { const V = g.nearVehicle(); t = { x: V.b.x, z: V.b.z, h: 2.2, txt: 'Сесть', sub: 'Марсоход' }; }
+      else if (X.nearC) t = { x: X.nearC.x, z: X.nearC.z, h: 1.1, txt: 'Открыть', sub: X.nearC.name };
       else if (g.nearMeteor && X.nearM) t = { x: X.nearM.x, z: X.nearM.z, h: 1.3, txt: 'Вскрыть', sub: 'Метеорит', r: 1.4 };
       else if (g.nearStash) t = { x: g.nearStash.x, z: g.nearStash.z, h: 1.15, txt: 'Открыть', sub: g.nearStash.name };
     }

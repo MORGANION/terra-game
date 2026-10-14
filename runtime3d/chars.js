@@ -40,6 +40,33 @@ export async function loadCharacter(url) {
   return cache[url];
 }
 
+// Жёсткие части (ранец, баллоны): вершины в зоне/цвета → 100% на одну кость, чтобы не гнулись при анимации.
+// rigid: [{ bone: 'Spine2', box: [[x0,y0,z0],[x1,y1,z1]] (в долях bbox меша 0..1), color?: 'mint'|[r,g,b,tol], feather?: 0.02 }]
+function rigidify(model, rules) {
+  model.traverse(o => {
+    if (!o.isSkinnedMesh || o.userData.rigidDone) return; o.userData.rigidDone = true;
+    const g = o.geometry, P = g.attributes.position, SI = g.attributes.skinIndex, SW = g.attributes.skinWeight, UV = g.attributes.uv;
+    const bones = o.skeleton.bones.map(b => b.name.replace(/^mixamorig:?/, ''));
+    g.computeBoundingBox(); const bb = g.boundingBox, sz = new THREE.Vector3().subVectors(bb.max, bb.min);
+    let px = null; const img = o.material?.map?.image;
+    if (img && rules.some(r => r.color)) { try { const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0); px = { d: cx.getImageData(0, 0, img.width, img.height).data, w: img.width, h: img.height, flip: o.material.map.flipY }; } catch {} }
+    const colorAt = i => { if (!px || !UV) return null; const u = UV.getX(i), v = UV.getY(i); const x = Math.min(px.w - 1, Math.max(0, Math.round(u * px.w))), y = Math.min(px.h - 1, Math.max(0, Math.round((px.flip ? 1 - v : v) * px.h))); const k = (y * px.w + x) * 4; return [px.d[k], px.d[k + 1], px.d[k + 2]]; };
+    const isColor = (c, want) => { if (!c) return false; const [r, gg, b] = c; if (want === 'mint') return gg > r + 25 && b > r + 5 && gg > 120; const [R, G, B, tol = 40] = want; return Math.abs(r - R) + Math.abs(gg - G) + Math.abs(b - B) < tol * 3; };
+    let changed = 0;
+    for (const R of rules) {
+      const bi = bones.indexOf(R.bone); if (bi < 0) continue;
+      const [a, c] = R.box || [[0, 0, 0], [1, 1, 1]];
+      const lo = new THREE.Vector3(bb.min.x + a[0] * sz.x, bb.min.y + a[1] * sz.y, bb.min.z + a[2] * sz.z), hi = new THREE.Vector3(bb.min.x + c[0] * sz.x, bb.min.y + c[1] * sz.y, bb.min.z + c[2] * sz.z);
+      const pick = new Uint8Array(P.count);
+      for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i); if (x < lo.x || x > hi.x || y < lo.y || y > hi.y || z < lo.z || z > hi.z) continue; if (R.color && !isColor(colorAt(i), R.color)) continue; pick[i] = 1; }
+      // швы UV: вершины в той же точке пространства, что и выбранные, тоже берём (иначе ранец «рвётся» по шву)
+      const key = i => `${P.getX(i).toFixed(4)},${P.getY(i).toFixed(4)},${P.getZ(i).toFixed(4)}`, set = new Set(); for (let i = 0; i < P.count; i++) if (pick[i]) set.add(key(i));
+      for (let i = 0; i < P.count; i++) if (pick[i] || set.has(key(i))) { SI.setXYZW(i, bi, 0, 0, 0); SW.setXYZW(i, 1, 0, 0, 0); changed++; }
+    }
+    SI.needsUpdate = SW.needsUpdate = true; o.userData.rigidCount = changed;
+  });
+}
+
 // Экземпляр персонажа: { root, play(name), update(dt) }. height — рост в метрах.
 export function makeCharacter(gltf, opts = {}) {
   const { height = 1.6, outline = 0.012, toon = true } = opts;
@@ -53,6 +80,7 @@ export function makeCharacter(gltf, opts = {}) {
   model.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(model, true), h = box.max.y - box.min.y || 1;
   const s = height / h; model.scale.setScalar(s); model.position.y = -box.min.y * s;
   const outlines = [];
+  if (opts.rigid) rigidify(model, opts.rigid);
   model.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = opts.shadow !== false; o.receiveShadow = false; o.frustumCulled = false;

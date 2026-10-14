@@ -60,7 +60,7 @@ async function boot() {
   try { await Platform.init(); } catch (e) { Q.errors.push('platform: ' + e.message); }
 
   const lowEnd = params.has('low') || /Android|iPhone/i.test(navigator.userAgent) && (navigator.hardwareConcurrency || 4) <= 4;
-  const renderer = new THREE.WebGLRenderer({ antialias: !lowEnd, powerPreference: 'high-performance', preserveDrawingBuffer: QA_MODE });
+  const renderer = new THREE.WebGLRenderer({ antialias: !lowEnd, powerPreference: 'high-performance', preserveDrawingBuffer: QA_MODE }); if (QA_MODE) Q.renderer = renderer;
   renderer.setPixelRatio(Math.min(devicePixelRatio, lowEnd ? 1 : 1.75));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = !lowEnd;
@@ -103,6 +103,33 @@ async function boot() {
   setLoad('Ресурсы…', 70);
   game.populate();
   ui.camera = camera; window.THREE_NS = THREE;
+  // ---------- Календарь наград за вход: один шаг за новый календарный день (серверное время Яндекса, иначе — устройство) ----------
+  const now = () => { try { return Platform.ysdk?.serverTime?.() || Date.now(); } catch { return Date.now(); } };
+  const dayKey = () => { const d = new Date(now()); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  game.daily = {
+    st: () => (game.state.daily ??= { claimed: 0, last: '' }),
+    canClaim() { const s = this.st(); return s.claimed < cfg.daily_calendar.length && s.last !== dayKey(); },
+    claim() { if (!this.canClaim()) return false; const s = this.st(), d = cfg.daily_calendar[s.claimed];
+      for (const [k, v] of Object.entries(d.items || {})) { const it = cfg.items[k]; if (it?.bp) { const [gid] = it.bp.split(':'); if (game.cfg.gear[gid]) game.explore.learn(k); else { game.state.bps[gid] = 1; ui.toast(`Новый ${it.name.toLowerCase()}`, 'rar-epic'); } } else game.state.inv[k] = (game.state.inv[k] || 0) + v; }
+      if (d.skin) (game.state.skins ??= {})[d.skin] = true;
+      s.claimed++; s.last = dayKey(); game.qa.event('daily', { day: s.claimed }); ui.toast(`${d.title} — получено!`, d.big ? 'rar-epic' : ''); game.save(); return true; },
+    dev() { const s = this.st(); s.last = ''; this.claim(); },
+  };
+  // 3D-превью награды: отдельный маленький рендерер, модель крутится
+  game.previewModel = (canvas, id) => {
+    const r = (game._pvr ||= new THREE.WebGLRenderer({ antialias: true, alpha: true })); r.setSize(360, 220, false);
+    const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 360 / 220, 0.1, 100);
+    sc.add(new THREE.HemisphereLight('#fff4e0', '#5a3020', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 2.4); sun.position.set(3, 5, 4); sc.add(sun);
+    const src = id === 'skin' ? player.model : models.instance(id === 'drone' ? 'oxygen_gen' : id); const o = id === 'skin' ? src.clone(true) : src;
+    const box = new THREE.Box3().setFromObject(o), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3()); o.position.sub(c); const g0 = new THREE.Group(); g0.add(o); sc.add(g0);
+    const R = size.length() / 2, D = R / Math.sin(THREE.MathUtils.degToRad(15)) * 0.8; cam.position.set(D * 0.55, D * 0.38, D * 0.74); cam.lookAt(0, 0, 0);
+    if (id === 'skin') o.traverse(m => { if (m.isMesh && m.material?.color && m.name !== 'outline') { m.material = m.material.clone(); m.material.color.lerp(new THREE.Color('#5cd6a8'), 0.55); } });
+    const ctx = canvas.getContext('2d'); let t0 = performance.now();
+    const tick = () => { if (!canvas.isConnected || document.getElementById('dprev')?.style.display === 'none') return; g0.rotation.y = (performance.now() - t0) / 1400; r.render(sc, cam); ctx.clearRect(0, 0, 360, 220); ctx.drawImage(r.domElement, 0, 0); requestAnimationFrame(tick); };
+    tick();
+  };
+  // При входе в новый день — сразу подсветить, что есть награда
+  setTimeout(() => { if (game.daily.canClaim()) { ui.toast(`${'🎁'} Награда за вход ждёт — K`, 'rar-epic'); ui.buttons.daily?.classList.add('pulseb'); } }, 4000);
   const { Audio } = await import('./audio.js'); const sfx = new Audio(ui.settings); game.sfx = ui.sfx = sfx; window.__sfx = sfx;
   // События игры → звуки
   QA.listeners.push((n, d) => { const S = { loot: 'loot_open', craft: 'craft', build: 'build', house: 'build', goal: 'goal', stage: 'stage', meteor_spawn: 'meteor_whoosh', storm_warn: 'storm_warn', learn: 'rare', gear: 'craft', gate_open: 'stage', cave_open: 'stage', death: 'death', lamp: 'build', pet: 'pickup', egg_ready: 'rare', evolve: 'stage', meteor_open: 'loot_open', item: 'tank' }[n]; if (S) sfx.play(S); if (n === 'meteor') sfx.play('meteor_impact', { k: 1 }); });
@@ -110,7 +137,10 @@ async function boot() {
   game.applySuit();
   // Позиция после сейва — у купола
   const sz = game.safeZone;
-  if (game.state.playtime > 0 && sz) player.pos.set(sz.x, game.groundY(sz.x, sz.z + 5), sz.z + 5);
+  const SP = game.state.pos;
+  if (SP && isFinite(SP.x) && isFinite(SP.z)) { player.pos.set(SP.x, game.groundY(SP.x, SP.z) + 0.05, SP.z); if (isFinite(SP.yaw)) player.yaw = SP.yaw; }   // где вышел — там и продолжаешь
+  else if (game.state.playtime > 0 && sz) player.pos.set(sz.x, game.groundY(sz.x, sz.z + 5), sz.z + 5);
+  try { game.explore.restoreMeteors(game.state.meteors); } catch (e) { Q.errors.push('meteors: ' + e.message); }
   player.resetFall(3);
   world.applyTerraform(game.ti(), game.state.stats, 10, player.pos);
   setLoad('Готово', 100);
@@ -144,6 +174,7 @@ async function boot() {
     if (hold !== Q.paused) { Q.paused = hold; ui.pauseVeil?.(hold && ui.panel !== 'settings'); sfx.ctx && (hold ? sfx.ctx.suspend() : sfx.ctx.resume()); if (hold) game.save(); }
     if (hold) { renderer.render(scene, camera); ui.update(); return; }
     for (let i = 0; i < steps; i++) {
+      if (game.driving && !game.paused && !game.dead && !ui.panel) game.preDrive(dt);   // сначала едет машина, потом герой и камера — без отставания
       if (!game.paused && !game.dead && !ui.panel) player.update(dt, camera);
       else player.update(game.dead && player.dying ? dt : 0, camera, game.dead);
       game.update(dt);

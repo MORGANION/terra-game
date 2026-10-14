@@ -850,6 +850,13 @@
       "color": "#bfe6ff",
       "rarity": "uncommon",
       "desc": "Уцелевшая секция купола: стекло, рёбра, уплотнители. Из 6 штук собирается купол базы"
+    },
+    "bp_rover": {
+      "name": "Чертёж: Марсоход",
+      "color": "#5cd6a8",
+      "rarity": "epic",
+      "desc": "Вездеход: быстрее ходьбы в 3 раза, внутри не тратится O₂",
+      "bp": "rover:1"
     }
   },
   "recipes": [
@@ -1167,6 +1174,22 @@
       "tier": 0,
       "indoor": true,
       "desc": "второй крафт-пункт: ставь в куполе или модуле"
+    },
+    {
+      "id": "rover",
+      "name": "Марсоход",
+      "build": "rover",
+      "cost": {
+        "iron": 20,
+        "silicon": 8,
+        "titanium": 4,
+        "cobalt": 4
+      },
+      "time": 0,
+      "tier": 1,
+      "needs_bp": "rover",
+      "vehicle": true,
+      "desc": "садись — E. Скорость ×3, O₂ внутри не тратится"
     }
   ],
   "monetization": {
@@ -2735,6 +2758,94 @@
       "poi": "ice_cave",
       "reward": {},
       "xp": 40
+    }
+  ],
+  "vehicles": {
+    "rover": {
+      "speed": 24,
+      "turn": 2.4,
+      "accel": 14,
+      "seat_y": 1.23,
+      "r": 1.4,
+      "seat_fwd": -0.05,
+      "phys": {
+        "mass": 1100,
+        "maxSpeed": 22,
+        "engine": 20,
+        "climb_deg": 38,
+        "slide_deg": 52,
+        "damp": 0.85,
+        "downforce": 0.03
+      },
+      "wheel": {
+        "at": [
+          0.3,
+          1.2,
+          0.46
+        ],
+        "grip": 0.15
+      },
+      "seat_x": 0.2
+    }
+  },
+  "daily_calendar": [
+    {
+      "day": 1,
+      "title": "Набор выживания",
+      "items": {
+        "o2_tank": 2,
+        "medkit": 1
+      }
+    },
+    {
+      "day": 2,
+      "title": "Скин астронавта",
+      "items": {
+        "o2_tank": 1
+      },
+      "skin": "suit_mint",
+      "preview": "skin"
+    },
+    {
+      "day": 3,
+      "title": "Чертёж: Марсоход",
+      "items": {
+        "bp_rover": 1
+      },
+      "preview": "rover",
+      "big": true,
+      "desc": "Вездеход на восьми колёсах. Скорость ×3, внутри не тратится кислород — доедешь до кратера и станции за минуту."
+    },
+    {
+      "day": 4,
+      "title": "Титан и кобальт",
+      "items": {
+        "titanium": 2,
+        "cobalt": 4
+      }
+    },
+    {
+      "day": 5,
+      "title": "Сигнал бедствия",
+      "items": {
+        "data_core": 1
+      }
+    },
+    {
+      "day": 6,
+      "title": "Редкие семена",
+      "items": {
+        "seeds": 4,
+        "star_core": 1
+      }
+    },
+    {
+      "day": 7,
+      "title": "Чертёж: Дрон-сборщик",
+      "items": {},
+      "preview": "drone",
+      "big": true,
+      "desc": "Летает рядом и сам добывает ближайшие жилы, пока ты в игре. (скоро)"
     }
   ]
 }

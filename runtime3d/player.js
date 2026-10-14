@@ -99,16 +99,57 @@ export class Player {
   }
   addSolid(x, z, r) { this.solids.push({ x, z, r }); }
 
+  // Поза сидя (вождение): после idle разворачиваем кости ног в мировых направлениях — бедро вперёд, голень вниз (не зависит от осей рига)
+  sitPose(c) {
+    const find = n => c.model.getObjectByName('mixamorig' + n) || c.model.getObjectByName('mixamorig:' + n);
+    const L = this._sitBones ||= ['Left', 'Right'].map(s => [find(s + 'UpLeg'), find(s + 'Leg'), find(s + 'Foot')]);
+    const A = this._sitArms ||= ['Left', 'Right'].map(s => [find(s + 'Arm'), find(s + 'ForeArm'), find(s + 'Hand'), s === 'Left' ? 1 : -1]);
+    const V = THREE.Vector3, oq = this.obj.quaternion, f = new V(0, 0, 1).applyQuaternion(oq), dn = new V(0, -1, 0).applyQuaternion(oq);   // оси машины (на склоне ноги наклоняются вместе с ней)
+    const thighDir = f.clone().multiplyScalar(0.97).addScaledVector(dn, 0.22).normalize(), shinDir = f.clone().multiplyScalar(-0.1).add(dn).normalize();
+    const aim = (bone, child, dir) => { if (!bone || !child) return; bone.updateWorldMatrix(true, true);
+      const a = bone.getWorldPosition(new V()), cur = child.getWorldPosition(new V()).sub(a).normalize();
+      const q = new THREE.Quaternion().setFromUnitVectors(cur, dir), wq = bone.getWorldQuaternion(new THREE.Quaternion()), pq = bone.parent.getWorldQuaternion(new THREE.Quaternion());
+      bone.quaternion.copy(pq.invert().multiply(q.multiply(wq))); };
+    for (const [up, low, foot] of L) { aim(up, low, thighDir); aim(low, foot, shinDir); }
+    // руки на руль: двухкостный IK (плечо–локоть–кисть) к точкам обода руля в системе машины
+    const V0 = this.driving, W = V0?.cfg?.wheel;
+    if (V0 && W) {
+      const [wx, wy, wz] = W.at, gr = W.grip ?? 0.11, M = V0.obj.matrixWorld;
+      const side = new V(1, 0, 0).applyQuaternion(V0.obj.quaternion);
+      for (const [arm, fore, hand, sg] of A) {
+        if (!arm || !fore || !hand) continue;
+        // левая рука — на левую сторону обода (в системе машины +x — левый борт при взгляде вперёд по +z)
+        // точка хвата на ободе (9 и 3 часа); кисть-кость = запястье, отводим её от обода против направления пальцев
+        const fing = hand.children.find(o => /Middle1|Index1/.test(o.name)) || hand.children[0];
+        const fDir = f.clone().multiplyScalar(0.35).addScaledVector(dn, -0.93).addScaledVector(side, -sg * 0.08).normalize();   // пальцы вверх по касательной к ободу (хват на 9 и 3)
+        const palm = fing ? hand.getWorldPosition(new V()).distanceTo(fing.getWorldPosition(new V())) : 0.08;
+        const T = new V(wx + sg * gr, wy, wz).applyMatrix4(M).addScaledVector(fDir, -palm * 0.9).addScaledVector(f, -0.03).addScaledVector(side, sg * 0.03);
+        arm.updateWorldMatrix(true, true);
+        const S = arm.getWorldPosition(new V()), Ep = fore.getWorldPosition(new V()), Hp = hand.getWorldPosition(new V());
+        const a = S.distanceTo(Ep), b = Ep.distanceTo(Hp), toT = T.clone().sub(S); let d = toT.length();
+        d = Math.min(Math.max(d, Math.abs(a - b) + 1e-3), a + b - 1e-3); const dir = toT.normalize();
+        // полюс локтя: вниз и наружу
+        const pole = dn.clone().addScaledVector(side, sg * 0.25).addScaledVector(dir, -dir.dot(dn.clone().addScaledVector(side, sg * 0.25))).normalize();
+        const ca = (a * a + d * d - b * b) / (2 * a * d), sa = Math.sqrt(Math.max(0, 1 - ca * ca));
+        const E = S.clone().addScaledVector(dir, ca * a).addScaledVector(pole, sa * a);
+        aim(arm, fore, E.clone().sub(S).normalize()); fore.updateWorldMatrix(true, true);
+        aim(fore, hand, T.clone().sub(fore.getWorldPosition(new V())).normalize());
+        if (fing) aim(hand, fing, fDir);
+      }
+    }
+  }
   update(dt, camera, frozen = false) {
     const inp = this.input;
     inp.poll();
     if (frozen) { inp.move.set(0, 0); inp.jump = false; inp.run = false; this.vel.x = this.vel.z = 0; }
+    const drivingMove = this.driving ? inp.move.clone() : null; if (this.driving) { inp.move.set(0, 0); inp.jump = false; }
     // Камера
     // Камера: накопленный за кадр сдвиг мыши/пальца применяем и СРАЗУ обнуляем (иначе камера крутится сама)
     this.yaw -= THREE.MathUtils.clamp(inp.look.x, -120, 120) * 0.005;
     this.pitch = THREE.MathUtils.clamp(this.pitch + THREE.MathUtils.clamp(inp.look.y, -80, 80) * 0.004, -1.2, 1.2);   // вниз-вверх: почти всё небо
     inp.look.set(0, 0);
     if (inp.zoom) { this.dist = THREE.MathUtils.clamp(this.dist + inp.zoom * 0.8, 5, 18); inp.zoom = 0; }
+    if (drivingMove) { this._dm = drivingMove; }
     // Движение относительно камеры
     const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
@@ -189,9 +230,9 @@ export class Player {
         q.position.set(this.pos.x - f.x * 0.35 + f.z * sx, this.pos.y + 0.45, this.pos.z - f.z * 0.35 - f.x * sx); q.userData.v = new THREE.Vector3((Math.random() - 0.5) * 0.8, -3 - Math.random() * 2, (Math.random() - 0.5) * 0.8); q.userData.life = 0.6 + Math.random() * 0.3; q.visible = true; q.scale.setScalar(0.6); }
       for (const q of fx.parts) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.multiplyScalar(1 - dt * 2.5); q.userData.v.y += dt * 1.5; q.scale.multiplyScalar(1 + dt * 2.2); q.material.opacity = Math.max(0, q.userData.life) * 0.7; q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; } }
     // Модель
-    this.obj.position.copy(this.pos);
-    let d = this.facing - this.obj.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
-    this.obj.rotation.y += d * Math.min(1, dt * 12);
+    if (this.driving && this._seat) { this.pos.copy(this._seat); this.vel.set(0, 0, 0); this.grounded = true; }   // физика пешехода не двигает сидящего
+    this.obj.position.copy(this.pos); if (!this.driving && (this.obj.rotation.x || this.obj.rotation.z)) { this.obj.rotation.x = 0; this.obj.rotation.z = 0; }
+    if (!this._lockRot) { let d = this.facing - this.obj.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); this.obj.rotation.y += d * Math.min(1, dt * 12); }
     // Скелетная анимация (Tripo GLB)
     if (this.char) {
       const A = this.char.anims, c = this.char;
@@ -199,8 +240,9 @@ export class Player {
       if (this.emote) this.emote.t -= dt;
       if (this.dying) { this.dying += dt; const k = Math.min(1, this.dying / 0.9); c.root.rotation.x = -k * 1.35; c.root.position.y = -k * 0.35; } else if (c.root.rotation.x) { c.root.rotation.x = 0; c.root.position.y = 0; }
       const sp = want === A.walk ? this.speedNow / this.cfg.walk : want === A.run ? this.speedNow / this.cfg.run : 1;
-      c.play(want, { speed: Math.max(0.6, Math.min(1.6, sp)) });
+      c.play(this.driving ? A.idle : want, { speed: this.driving ? 1 : Math.max(0.6, Math.min(1.6, sp)) });
       c.update(dt);
+      if (this.driving) this.sitPose(c); // поза сидя поверх idle: бёдра вперёд, колени согнуты
     }
     // Анимация ходьбы / добычи (процедурная модель)
     this.walkPhase += dt * this.speedNow * 1.6;
@@ -227,7 +269,7 @@ export class Player {
     const cp = target.clone().add(new THREE.Vector3(Math.sin(this.yaw) * Math.cos(pc), Math.sin(pc), Math.cos(this.yaw) * Math.cos(pc)).multiplyScalar(dist));
     const gh = this.world.heightAt(cp.x, cp.z) + 0.6;
     if (cp.y < gh) cp.y = gh;
-    camera.position.lerp(cp, Math.min(1, dt * 10));
+    camera.position.lerp(cp, Math.min(1, dt * (this.driving ? 30 : 10)));
     // взгляд: цель поднимается вверх над героем пропорционально наклону
     if (low > 0) {
       const el = Math.min(1.25, low * 1.05), fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);

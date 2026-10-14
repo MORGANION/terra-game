@@ -175,12 +175,13 @@ export class Explore {
   }
 
   // ---------- Метеориты ----------
-  spawnMeteor(type) {
+  spawnMeteor(type, restore = null) {
     const g = this.g, M = this.cfg.meteors, p = g.player.pos;
-    if (!type) { const tot = M.types.reduce((a, t) => a + t.w, 0); let r = Math.random() * tot; type = M.types.find(t => (r -= t.w) <= 0) || M.types[0]; }
+    if (restore) type = M.types.find(t => t.id === restore.type) || M.types[0];
+    else if (!type) { const tot = M.types.reduce((a, t) => a + t.w, 0); let r = Math.random() * tot; type = M.types.find(t => (r -= t.w) <= 0) || M.types[0]; }
     else type = M.types.find(t => t.id === type);
     let x, z;
-    for (let a = 0; a < 20; a++) { const [d0, d1] = this.cfg.meteors.dist || [22, 40], ang = Math.random() * 6.28, d = d0 + Math.random() * (d1 - d0); x = p.x + Math.cos(ang) * d; z = p.z + Math.sin(ang) * d; if (g.world.waterAt(x, z) < -50 && Math.abs(x) < g.world.half * 0.8 && Math.abs(z) < g.world.half * 0.8) break; }
+    if (restore) { x = restore.x; z = restore.z; } else for (let a = 0; a < 20; a++) { const [d0, d1] = this.cfg.meteors.dist || [22, 40], ang = Math.random() * 6.28, d = d0 + Math.random() * (d1 - d0); x = p.x + Math.cos(ang) * d; z = p.z + Math.sin(ang) * d; if (g.world.waterAt(x, z) < -50 && Math.abs(x) < g.world.half * 0.8 && Math.abs(z) < g.world.half * 0.8) break; }
     const y = g.world.heightAt(x, z);
     const core = g.models.instance('meteor_core');
     core.traverse(c => { if (c.isMesh && c.material.emissive && c.material.emissiveIntensity > 0.3) { c.material = c.material.clone(); c.material.emissive.set(type.color); } });
@@ -197,42 +198,53 @@ export class Explore {
     const sm = new THREE.MeshBasicMaterial({ color: '#1e1a17', transparent: true, opacity: 0.5, depthWrite: false, fog: false });
     for (let i = 0; i < 10; i++) { const s = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2 + Math.random(), 0), sm); s.userData.smoke = Math.random(); s.position.set(x + (Math.random() - 0.5) * 3, y, z + (Math.random() - 0.5) * 3); fires.add(s); }
     fires.visible = false; g.scene.add(fires);
-    const m = { type, core, trail, fires, x, z, y, fall: 1.6, age: 0, slot: this.scorchSlot++ % 4, shards: [] };
+    const m = { type, core, trail, fires, x, z, y, fall: 1.6, age: 0, slot: this.scorchSlot++ % 4, shards: [], id: restore?.id || ('M' + Date.now().toString(36) + (Math.random() * 1e4 | 0)) };
     this.meteors.push(m);
+    if (restore) { m.fall = 0; m.age = restore.age || 0; m.opened = !!restore.opened; m.items = restore.items || null; this.impact(m, restore.shards); if (m.opened) m.core.traverse(c => { if (c.isMesh && c.material.emissive) { c.material = c.material.clone(); c.material.emissiveIntensity *= 0.15; } }); return m; }
     g.ui.toast(`☄️ ${type.name} падает!`, type.id === 'star' ? 'rar-legendary' : type.id === 'crystal' ? 'rar-epic' : type.id === 'cobalt' ? 'rar-rare' : '');
     g.qa.event('meteor_spawn', { type: type.id });
     return m;
   }
-  impact(m) {
+  impact(m, saved = null) {
     const g = this.g, w = g.world;
     m.core.position.y = m.y - 0.3; m.trail.visible = false; m.fires.visible = true;
     w.setScorch(m.slot, m.x, m.z, m.type.scorch, 1);
-    g.ui.shake(Math.min(1.2, 0.5 + m.type.scorch / 20)); g.ui.flash(m.type.color);
-    { const d = Math.hypot(m.x - g.player.pos.x, m.z - g.player.pos.z); g.sfx?.play('meteor_impact', { k: Math.max(0.25, 1.4 - d / 120) }); }
+    if (!saved) { g.ui.shake(Math.min(1.2, 0.5 + m.type.scorch / 20)); g.ui.flash(m.type.color);
+      const d = Math.hypot(m.x - g.player.pos.x, m.z - g.player.pos.z); g.sfx?.play('meteor_impact', { k: Math.max(0.25, 1.4 - d / 120) }); }
     g.player.addSolid(m.x, m.z, 1.0);
     // Осколки — добываемые узлы вокруг
-    const S = m.type.shards;
-    for (let k = 0; k < S.length; k += 2) for (let i = 0; i < S[k + 1]; i++) {
-      const a = Math.random() * 6.28, d = 2.2 + Math.random() * m.type.scorch * 0.7, x = m.x + Math.cos(a) * d, z = m.z + Math.sin(a) * d;
-      const o = g.models.instance(S[k]); o.position.set(x, w.heightAt(x, z) - 0.05, z); o.rotation.set(Math.random() * 0.5, Math.random() * 6, Math.random() * 0.5); o.scale.setScalar(0.6 + Math.random() * 0.35); g.scene.add(o);
-      const node = { res: S[k], i: 0, x, z, y: o.position.y, key: 'm:' + Math.random(), dyn: true, obj: o };
-      node.ctl = { items: [{ visible: true }], hide: () => { node.ctl.items[0].visible = false; g.scene.remove(o); }, set() {}, flush() {} };
+    const S = m.type.shards, list = [];
+    if (saved) for (const q of saved) list.push(q);
+    else for (let k = 0; k < S.length; k += 2) for (let i = 0; i < S[k + 1]; i++) { const a = Math.random() * 6.28, d = 2.2 + Math.random() * m.type.scorch * 0.7; list.push({ res: S[k], x: m.x + Math.cos(a) * d, z: m.z + Math.sin(a) * d }); }
+    for (const q of list) {
+      const x = q.x, z = q.z;
+      const o = g.models.instance(q.res); o.position.set(x, w.heightAt(x, z) - 0.05, z); o.rotation.set(Math.random() * 0.5, Math.random() * 6, Math.random() * 0.5); o.scale.setScalar(0.6 + Math.random() * 0.35); g.scene.add(o);
+      const node = { res: q.res, i: 0, x, z, y: o.position.y, key: 'm:' + Math.random(), dyn: true, obj: o };
+      node.ctl = { items: [{ visible: true }], hide: () => { node.ctl.items[0].visible = false; g.scene.remove(o); g.saveSoon?.(); }, set() {}, flush() {} };
       g.nodes.push(node); m.shards.push(node);
     }
     g.qa.event('meteor', { type: m.type.id });
   }
-  nearestMeteor() { const p = this.g.player.pos; return this.meteors.find(m => m.fall <= 0 && !m.opened && Math.hypot(p.x - m.x, p.z - m.z) < 3.6); }
+  nearestMeteor() { const p = this.g.player.pos; return this.meteors.find(m => m.fall <= 0 && (!m.opened || m.items?.length) && Math.hypot(p.x - m.x, p.z - m.z) < 3.6); }
   async openMeteor(m) {
-    if (!m || m.opened) return;
+    if (!m) return;
+    if (m.opened) { if (!m.items?.length) return; const left = await this.g.ui.lootPanel(`Ядро: ${m.type.name}`, m.items, this); m.items = left; this.g.save(); return; }
     this.g.qa.event('meteor_touch', {});
     if (!(await this.g.rewarded('meteor_cache'))) return;
     m.opened = true;
-    const items = this.loot.roll(m.type.core, Math.random() * 1e9 | 0);
+    const items = m.items || this.loot.roll(m.type.core, Math.random() * 1e9 | 0); m.items = items; this.g.save();
     m.core.traverse(c => { if (c.isMesh && c.material.emissive) { c.material = c.material.clone(); c.material.emissiveIntensity *= 0.15; } });
     const left = await this.g.ui.lootPanel(`Ядро: ${m.type.name}`, items, this);
-    m.left = left;
+    m.left = left; m.items = left; this.g.save();
     this.g.qa.event('meteor_open', { type: m.type.id });
   }
+
+  // ---------- Сейв метеоритов: место, тип, возраст, лут ядра, несобранные осколки ----------
+  serializeMeteors() {
+    return this.meteors.filter(m => m.fall <= 0).map(m => ({ id: m.id, type: m.type.id, x: +m.x.toFixed(2), z: +m.z.toFixed(2), age: Math.round(m.age), opened: !!m.opened, items: m.items || null,
+      shards: m.shards.filter(s => s.ctl.items[0].visible).map(s => ({ res: s.res, x: +s.x.toFixed(2), z: +s.z.toFixed(2) })) }));
+  }
+  restoreMeteors(list) { for (const r of list || []) { try { this.spawnMeteor(null, r); } catch (e) { console.warn('meteor restore', e); } } }
 
   // ---------- Кадр ----------
   update(dt) {

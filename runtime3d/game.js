@@ -4,6 +4,7 @@ import { rng } from './noise.js';
 import { Life } from './life.js';
 import { Explore } from './explore.js';
 import { Builder } from './build.js';
+import { VehicleBody, rigWheels, animWheels } from './vehicle.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -45,7 +46,12 @@ export class Game {
       if (s && !new URLSearchParams(location.search).has('fresh')) { Object.assign(this.state, s); this.state.stats = { heat: 0, pressure: 0, oxygen: 0, biomass: 0, ...s.stats }; }
     } catch {}
   }
-  save() { if (this.restarting || this.staleTab) return; this.state.lastSeen = Date.now(); try { localStorage.setItem(this.saveKey(), JSON.stringify(this.state)); } catch {} }
+  saveSoon() { clearTimeout(this._svT); this._svT = setTimeout(() => this.save(), 400); }
+  save() { if (this.restarting || this.staleTab) return; this.state.lastSeen = Date.now();
+    try { if (this.explore) this.state.meteors = this.explore.serializeMeteors(); } catch {}
+    if (!this.dead && this.player?.pos && !this.driving) { const p = this.player.pos; this.state.pos = { x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), yaw: +this.player.yaw.toFixed(3) }; }
+    else if (this.driving) { const V = this.driving, a = V.b.rot + Math.PI / 2; this.state.pos = { x: +(V.b.x + Math.cos(a) * 2).toFixed(2), z: +(V.b.z - Math.sin(a) * 2).toFixed(2), yaw: +this.player.yaw.toFixed(3) }; }
+    try { localStorage.setItem(this.saveKey(), JSON.stringify(this.state)); } catch {} }
 
   // ---------- Мир: ресурсы, флора, постройки ----------
   populate() {
@@ -165,6 +171,7 @@ export class Game {
     this.player.addSolid(b.x, b.z, 0.8);
     const R = this.cfg.recipes.find(r => r.id === b.recipe);
     if (b.recipe === 'workbench') (this.workbenches ||= []).push({ x: b.x, z: b.z });
+    if (R?.vehicle) { this.vehicles ??= []; const V = { b, obj: o, cfg: this.cfg.vehicles[b.recipe], speed: 0 }; V.body = new VehicleBody(this, V); V.body.apply(); try { rigWheels(V); } catch (e) { (window.__qa?.errors || []).push('wheels: ' + e.message); } this.vehicles.push(V); return o; }
     if (R?.storage) this.storages.push({ key: 'b:' + b.x.toFixed(2) + ',' + b.z.toFixed(2), x: b.x, z: b.z, slots: R.storage, name: R.name });
     if (fresh) { o.scale.setScalar(0.01); this.pop = this.pop || []; this.pop.push({ o, t: 0 }); }
     // Светящаяся «колонна» выхлопа над машиной
@@ -175,6 +182,27 @@ export class Game {
   groundY(x, z) { const h = this.world.heightAt(x, z); return this.builder.groundAt(x, z, h); }
   // Мелкие постройки (сундук, фонарь и т.п.) можно ставить внутри модулей; машины — только снаружи
   indoorOk(r) { return !!(r.storage || r.indoor); }
+  // ---------- Транспорт ----------
+  nearVehicle() { if (this.driving) return null; const p = this.player.pos; return (this.vehicles || []).find(V => Math.hypot(V.b.x - p.x, V.b.z - p.z) < 3.2) || null; }
+  toggleDrive() {
+    if (this.driving) { const V = this.driving; this.driving = null; this.player._lockRot = false; this.player.obj.rotation.set(0, V.b.rot, 0); this.sfx?.play('engine_stop'); const a = V.b.rot + Math.PI / 2; this.player.pos.set(V.b.x + Math.cos(a) * 2, this.groundY(V.b.x + Math.cos(a) * 2, V.b.z - Math.sin(a) * 2), V.b.z - Math.sin(a) * 2); this.player.obj.visible = true; this.player.resetFall(1); this.player.driving = null; this.save(); return; }
+    const V = this.nearVehicle(); if (!V) return; this.driving = V; this.player.driving = V; V.speed = 0; this.player.yaw = V.b.rot + Math.PI; this.sfx?.play('engine_start'); this.qa.event('drive', {});
+  }
+  preDrive(dt) { this.player.input.poll?.(); this.player._dm = this.player.input.move.clone(); this.updateVehicles(dt); }
+  updateVehicles(dt) {
+    // физика всех машин (припаркованные тоже катятся под горку, пока не уснут)
+    for (const V of this.vehicles || []) {
+      const drv = V === this.driving, inp = this.player.input, mv = drv ? (this.player._dm || inp.move) : null;
+      if (drv) V.body.wake();
+      V.body.step(dt, drv ? { x: mv.x || 0, y: mv.y || 0, run: inp.run } : null); V.body.apply(); animWheels(V, dt);
+    }
+    const V = this.driving; if (!V) return; const C = V.cfg;
+    // сиденье — точка в системе машины: герой жёстко на корпусе
+    const seat = new THREE.Vector3(C.seat_x || 0, C.seat_y - 0.9, C.seat_fwd || 0).applyMatrix4(V.obj.matrixWorld);
+    const P = this.player; P._seat = seat; P.pos.copy(seat); P.obj.position.copy(seat); P.obj.quaternion.copy(V.obj.quaternion); P.facing = V.b.rot; P._lockRot = true;
+    P.speedNow = 0; P.grounded = true; P.vel.set(0, 0, 0); P.resetFall(0.5);
+    if (Math.abs(V.speed) > 1) P.yaw += (((V.b.rot + Math.PI) - P.yaw + Math.PI * 3) % (Math.PI * 2) - Math.PI) * Math.min(1, dt * 1.5);
+  }
   // ---------- Купол базы: строится один раз, внутри сразу фабрикатор и сундук ----------
   spawnBaseDome(d, fresh) {
     const D = this.builder.addDome(d, fresh); D.starter = true; this.safeZone = { x: d.x, z: d.z, r: d.r };
@@ -342,6 +370,7 @@ export class Game {
     const ti = this.ti(), L = this.life?.L;
     let locked = !!(r.unlock_ti && ti < r.unlock_ti), why = locked ? `Ti ${r.unlock_ti}` : '';
     if (r.unlock_life != null && (!L?.started || L.stage < r.unlock_life)) { locked = true; why = L?.started ? `эпоха «${this.cfg.evolution.stages[r.unlock_life].name}»` : 'зарождение жизни'; }
+    if (r.needs_bp && !(this.state.bps?.[r.needs_bp] >= 1)) { locked = true; why = 'нужен чертёж'; }
     const built = r.once && (this.state.buildings.some(b => b.recipe === r.id) || (r.build === '__dome' && (this.state.baseDome || this.state.domeKit)));
     if (built) { locked = true; why = 'уже построено'; }
     return { locked, why, affordable: !locked && this.has(this.costOf(r)) };
@@ -516,7 +545,7 @@ export class Game {
     }
     for (const f of this.flora) f.ctl.flush();
     // Выживание
-    this.inHouse = this.builder.inside(p);
+    this.inHouse = this.builder.inside(p) || !!this.driving;
     { const G = this.goal(); if (G?.event === 'visit_poi') { const q = this.cfg.world.pois.find(q => q.id === G.poi); if (q && Math.hypot(p.x - q.x, p.z - (q.z + (q.type === 'ice_cave' ? 8 : 0))) < 16) this.goalEvent('visit_poi'); } }
     if (this.inHouse && this.state.baseDome && !this.state.flags.entered) { this.state.flags.entered = 1; this.qa.event('dome_enter'); }
     if (this.state.baseDome && !this.state.flags.stash_tip && this.usedSlots() >= this.slots()) { this.state.flags.stash_tip = 1; this.ui.coach?.(this.cfg.texts.stash_tip, 'crate'); this.save(); }
@@ -540,6 +569,12 @@ export class Game {
       if (pl.grounded && pl.speedNow > 0.5) { this._stepT = (this._stepT || 0) + dt * pl.speedNow / 2.2; if (this._stepT > 1) { this._stepT = 0; sx.play('step', { k: pl.speedNow > 8 ? 1.2 : 0.9 }); } }
       if (!pl.grounded && this._wasGrounded && pl.vel.y > 2) sx.play('jump');
       this._wasGrounded = pl.grounded;
+      // марсоход: мотор + шорох песка/хруст гравия под колёсами
+      { const V = this.driving, sp = V ? Math.abs(V.speed) / V.cfg.speed : 0, acc = V ? Math.abs((this.player._dm?.y) || 0) : 0;
+        sx.engine(!!V, Math.min(1, sp * 1.1 + acc * 0.15), acc);
+        sx.loop('sand', { type: 'bandpass', f: 900, q: 0.5 }); sx.setLoop('sand', V ? Math.min(0.32, sp * 0.4) : 0, 500 + sp * 1600 + Math.random() * 200);
+        sx.loop('rumble', { type: 'lowpass', f: 120, q: 1.2 }); sx.setLoop('rumble', V ? Math.min(0.5, sp * 0.6) : 0, 80 + sp * 90);
+        if (V && sp > 0.15 && Math.random() < dt * sp * 6) sx.play('step', { k: 0.5 }); }   // камешки под колёсами
       sx.loop('jet', { type: 'bandpass', f: 500, q: 0.8 }); sx.setLoop('jet', pl.jetting ? 0.35 : 0, pl.jetting ? 420 + Math.random() * 120 : 300);
       sx.loop('storm', { type: 'bandpass', f: 400, q: 0.6 }); const st = this.explore.storm || 0; sx.setLoop('storm', st * 0.45 * (this.inHouse ? 0.18 : 1), 300 + st * 500 + Math.sin(this.time * 0.7) * 120);
       if (this.suffocating) { this._hurtT = (this._hurtT || 0) + dt; if (this._hurtT > 0.9) { this._hurtT = 0; sx.play('hurt'); } }
@@ -567,6 +602,7 @@ export class Game {
     // Анимация появления построек
     if (this.pop) for (const q of this.pop) { q.t = Math.min(1, q.t + dt * 2.5); const s = q.t < 1 ? 1 + Math.sin(q.t * Math.PI) * 0.15 : 1; q.o.scale.setScalar(Math.max(0.01, q.t) * s); }
     // Исследование: метеориты, сутки, буря, обломки
+    if (!this.driving && this.vehicles?.length) this.updateVehicles(dt);   // припаркованные — тоже физика (пока не уснут)
     this.explore.update(dt);
     this.builder.update(dt);
     this.nearMeteor = !!this.explore.nearM;

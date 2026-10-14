@@ -49,8 +49,28 @@ export class Audio {
   }
   setLoop(name, vol, f) { const L = this.loops[name]; if (!L) return; const t = this.t; L.g.gain.setTargetAtTime(vol, t, 0.08); if (f) L.fl.frequency.setTargetAtTime(f, t, 0.1); }
 
+  // Мотор транспорта: пила + квадрат через lowpass, «пыхтение» — амплитудная модуляция; rpm 0..1
+  engine(on, rpm = 0, load = 0) {
+    if (!this.ctx) return; const c = this.ctx, t = this.t;
+    let E = this.eng;
+    if (!E && !on) return;
+    if (!E) {
+      E = this.eng = { g: c.createGain(), fl: c.createBiquadFilter(), o1: c.createOscillator(), o2: c.createOscillator(), lfo: c.createOscillator(), lg: c.createGain(), am: c.createGain() };
+      E.o1.type = 'sawtooth'; E.o2.type = 'square'; E.o2.detune.value = 7; E.fl.type = 'lowpass'; E.fl.Q.value = 2.5; E.g.gain.value = 0;
+      E.lfo.type = 'sine'; E.lg.gain.value = 0.35; E.am.gain.value = 0.65;
+      const mix = c.createGain(); mix.gain.value = 0.5; E.o1.connect(mix); E.o2.connect(mix); mix.connect(E.am); E.lfo.connect(E.lg); E.lg.connect(E.am.gain);
+      E.am.connect(E.fl); E.fl.connect(E.g); E.g.connect(this.sfx); for (const o of [E.o1, E.o2, E.lfo]) o.start();
+    }
+    const f = 38 + rpm * 70;                                    // базовая частота «цилиндров»
+    E.o1.frequency.setTargetAtTime(f, t, 0.12); E.o2.frequency.setTargetAtTime(f * 0.5, t, 0.12);
+    E.lfo.frequency.setTargetAtTime(9 + rpm * 26, t, 0.12);     // пыхтение ускоряется с оборотами
+    E.fl.frequency.setTargetAtTime(260 + rpm * 900 + load * 300, t, 0.1);
+    E.g.gain.setTargetAtTime(on ? 0.11 + rpm * 0.09 + load * 0.04 : 0, t, on ? 0.15 : 0.35);
+  }
   // ---------- События ----------
   play(id, opt = {}) {
+    if (id === 'engine_start') { this.tone({ f: 60, f2: 120, type: 'sawtooth', dur: 0.5, vol: 0.12 }); this.noise({ dur: 0.35, vol: 0.12, f: 300, f2: 900 }); this.tone({ f: 900, type: 'sine', dur: 0.08, vol: 0.06, delay: 0.05 }); return; }
+    if (id === 'engine_stop') { this.tone({ f: 90, f2: 35, type: 'sawtooth', dur: 0.6, vol: 0.1 }); this.noise({ dur: 0.25, vol: 0.06, type: 'bandpass', f: 1200, f2: 300, delay: 0.1 }); return; }
     if (!this.ctx) return;
     const R = (a, b) => a + Math.random() * (b - a);
     switch (id) {

@@ -617,3 +617,19 @@ body.suffo .bar.o2,body.suffo .bar.hp{background:rgba(38,21,15,.95)}
 @media (max-width:700px){#ptime{bottom:auto;top:calc(max(var(--pad),var(--sat)) + 2px);font-size:10px}}
 #ptime{padding:2px 7px;border-radius:8px;background:rgba(20,10,6,.55);opacity:.9}
 @media (max-width:700px){#ptime{top:auto;bottom:max(6px,var(--sab));left:50%}}
+
+/* календарь наград и превью */
+.daily{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px;margin:8px 0}
+.dcell{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px;border-radius:14px;background:var(--cocoa-2);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);text-align:center;cursor:pointer;min-height:118px}
+.dcell small{font:800 10px var(--font);color:var(--gold);text-transform:uppercase;letter-spacing:.06em}
+.dcell b{font:800 12px/1.15 var(--font)}.dcell em{font:700 10px var(--font);font-style:normal;color:var(--mut)}
+.dcell .dico{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--cocoa-3);font-size:26px;color:var(--cream)}
+.dcell.big{background:linear-gradient(160deg,#5a3a26,#2e1f18);border-color:#ffcf4a}.dcell.big .dico{background:#ffcf4a;color:var(--ink)}
+.dcell.got{opacity:.55}.dcell.next{box-shadow:0 0 0 3px var(--mint),0 3px 0 var(--ink)}
+#dprev{position:absolute;z-index:40;width:360px;box-sizing:border-box;padding:10px;border-radius:16px;background:var(--cocoa);border:3px solid var(--ink);box-shadow:0 6px 0 var(--ink);pointer-events:none;display:none}
+#dprev .pvimg{height:200px;border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 70%,#7a4a30,#2a1812)}
+#dprev canvas{width:100%;height:100%;display:block}#dprev .pvicon{display:grid;place-items:center;height:100%;font-size:80px;color:#ffcf4a}
+#dprev b{display:block;margin:8px 0 2px;font:800 15px var(--font)}#dprev p{margin:0 0 6px;font:600 12px/1.3 var(--font);color:var(--mut)}
+.pvitems{display:flex;flex-wrap:wrap;gap:4px}
+.btn.devbtn{position:absolute;right:max(var(--pad),var(--sar));top:calc(max(var(--pad),var(--sat)) + 52px);width:44px;height:28px;font:900 11px var(--font);background:var(--pink)}
+.dcell.hov{transform:translateY(-3px);box-shadow:0 0 0 3px #ffcf4a,0 6px 0 var(--ink)}
