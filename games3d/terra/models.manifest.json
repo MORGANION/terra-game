@@ -531,21 +531,6 @@
       "anims": {},
       "rotX": -1.5708,
       "rotY": 1.5708
-    },
-    "hero_girl": {
-      "url": "assets/hero.glb",
-      "height": 1.55,
-      "outline": 0.012,
-      "anims": {
-        "idle": "idle",
-        "walk": "walk",
-        "run": "run",
-        "jump": "jump",
-        "fall": "fall",
-        "mine": "dig",
-        "cheer": "cheer",
-        "wave": "greet_01"
-      }
     }
   },
   "props": [
