@@ -1,0 +1,162 @@
+{
+  "reed": {
+    "ok": true,
+    "size": [
+      0.49,
+      1.35,
+      0.56
+    ],
+    "meshes": 12,
+    "tris": 160
+  },
+  "succulent": {
+    "ok": true,
+    "size": [
+      0.9,
+      0.66,
+      0.93
+    ],
+    "meshes": 11,
+    "tris": 210
+  },
+  "bush_berry": {
+    "ok": true,
+    "size": [
+      1.13,
+      1.04,
+      1.26
+    ],
+    "meshes": 23,
+    "tris": 704
+  },
+  "flowers": {
+    "ok": true,
+    "size": [
+      0.85,
+      0.34,
+      0.77
+    ],
+    "meshes": 5,
+    "tris": 388
+  },
+  "res_cobalt": {
+    "ok": true,
+    "size": [
+      1.11,
+      0.97,
+      1.02
+    ],
+    "meshes": 14,
+    "tris": 496
+  },
+  "mushroom_tree": {
+    "ok": true,
+    "size": [
+      2.14,
+      3.36,
+      2.16
+    ],
+    "meshes": 20,
+    "tris": 802
+  },
+  "res_crystal": {
+    "ok": true,
+    "size": [
+      0.96,
+      1.22,
+      0.96
+    ],
+    "meshes": 14,
+    "tris": 532
+  },
+  "loot_crate": {
+    "ok": true,
+    "size": [
+      1.17,
+      0.8,
+      0.76
+    ],
+    "meshes": 13,
+    "tris": 228
+  },
+  "meteor_core": {
+    "ok": true,
+    "size": [
+      2.42,
+      2.11,
+      2.44
+    ],
+    "meshes": 21,
+    "tris": 556
+  },
+  "chest": {
+    "ok": true,
+    "size": [
+      1.2,
+      0.88,
+      0.79
+    ],
+    "meshes": 12,
+    "tris": 156
+  },
+  "lamp": {
+    "ok": true,
+    "size": [
+      0.42,
+      1.62,
+      0.38
+    ],
+    "meshes": 9,
+    "tris": 288
+  },
+  "suit_body": {
+    "ok": true,
+    "size": [
+      0.89,
+      0.54,
+      1.8
+    ],
+    "meshes": 19,
+    "tris": 964
+  },
+  "ice_gate": {
+    "ok": true,
+    "size": [
+      16.19,
+      12.02,
+      6.76
+    ],
+    "meshes": 36,
+    "tris": 878
+  },
+  "alien_relic": {
+    "ok": true,
+    "size": [
+      2.2,
+      3.01,
+      2.18
+    ],
+    "meshes": 19,
+    "tris": 918
+  },
+  "wreck_ship": {
+    "ok": true,
+    "size": [
+      15.9,
+      7,
+      28.29
+    ],
+    "meshes": 54,
+    "tris": 1120
+  },
+  "station_ring": {
+    "ok": true,
+    "size": [
+      26,
+      14.64,
+      10.17
+    ],
+    "meshes": 57,
+    "tris": 1536
+  }
+}

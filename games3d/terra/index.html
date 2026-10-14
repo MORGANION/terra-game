@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Терра: Красная планета</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Russo+One&family=JetBrains+Mono:wght@700;800&display=swap">
+<link rel="stylesheet" href="../../runtime3d/ui.css">
+<script type="importmap">{"imports":{"three":"../../node_modules/three/build/three.module.js","three/addons/":"../../node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="suffo"></div><div id="suffotxt"></div><div id="homearrow"><svg viewBox="0 0 24 24"><path d="M12 2l7 12h-4.5v8h-5v-8H5z"/></svg><span><svg class="i"><use href="#i-dome"/></svg></span></div>
+<div id="ui">
+  <div id="hud">
+    <div class="bars">
+      <div id="o2box" class="bar o2"><b></b><div class="track"><div id="o2bar"></div></div><span id="o2val"></span><em id="o2eta"></em></div>
+      <div id="hpbox" class="bar hp"><b></b><div class="track"><div id="hpbar"></div></div><span id="hpval"></span></div>
+      <div id="jetbox" class="bar jet"><b></b><div class="track"><div id="jetbar"></div></div><span id="jetval"></span></div>
+      <div id="clock"></div>
+      <div id="pills"></div>
+    </div>
+    <div id="ti">
+      <div class="tihead" data-collapse="ti"><i class="ico"></i><span id="stage" data-k="ТЕРРАФОРМИНГ"></span><b id="tival">0</b><small>Ti</small><svg class="i tog"><use href="#i-chev"/></svg></div>
+      <div class="track"><div id="tibar"></div></div>
+      <div class="tinext"><span id="tinext"></span></div>
+      <div class="stats"><span id="st_heat"></span><span id="st_pressure"></span><span id="st_oxygen"></span><span id="st_biomass"></span></div>
+      <div id="boost"></div>
+      <div id="lifehud" style="display:none">
+        <div class="tihead" data-collapse="lifehud"><i class="ico"></i><span id="bistage" data-k="РОД ФЕНЕКОВ"></span><b id="bival">0</b><small>Bi</small><svg class="i tog"><use href="#i-chev"/></svg></div>
+        <div class="track"><div id="bibar"></div></div>
+        <div class="stats"><span id="pop"></span><span id="food"></span><span id="dna"></span><span id="cry"></span></div>
+        <div class="tinext"><span id="egg"></span><span id="bless"></span></div>
+      </div>
+    </div>
+  </div>
+  <div id="goal"></div>
+  <div id="side"></div>
+  <div id="actions"></div>
+  <div id="hint"></div>
+  <div id="wtag" style="display:none"></div><div id="btag" style="display:none"></div><div id="qtag" style="display:none"></div>
+  <div id="flash"></div>
+  <div id="safe"></div>
+  <div id="minebar"><div></div></div>
+  <div id="toasts"></div>
+  <div id="banner"></div>
+  <div id="fps"></div><div id="ptime"></div>
+  <div id="stick"><div id="knob"></div></div>
+  <div id="panel"><div class="pwrap"><div class="phead"><span id="ptitle"></span><button id="close" class="btn mid" aria-label="Закрыть"><svg class="i"><use href="#i-close"/></svg></button></div><div id="pbody"></div></div></div>
+  <div id="dialog"><div class="card"></div></div>
+</div>
+<div id="loading"><div class="lt">ТЕРРА</div><div class="ltrack"><div id="loadbar"></div></div><div id="loadtxt">Загрузка…</div></div>
+<script type="module" src="../../runtime3d/main.js"></script>
+</body>
+</html>

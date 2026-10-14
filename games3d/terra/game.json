@@ -1,0 +1,2740 @@
+{
+  "slug": "terra",
+  "title": "Терра: Красная планета",
+  "pitch": "Выживи на Марсе, добывай ресурсы, строй машины — и шаг за шагом превращай мёртвую планету в живой мир.",
+  "world": {
+    "_comment": "Мир — данные. Рантайм строит террейн, воду, зоны и объекты отсюда. Координаты в метрах, X вправо, Z вниз карты, Y вверх.",
+    "size": 400,
+    "segments": 320,
+    "seed": 7,
+    "height": {
+      "base_amp": 7,
+      "base_freq": 0.012,
+      "detail_amp": 1.6,
+      "detail_freq": 0.06,
+      "octaves": 4,
+      "ridge": 0.35
+    },
+    "spawn": [
+      -4,
+      0,
+      0
+    ],
+    "flatten": [
+      {
+        "x": 0,
+        "z": 0,
+        "r": 22,
+        "h": 2.0,
+        "_comment": "плато базы"
+      }
+    ],
+    "features": [
+      {
+        "type": "basin",
+        "id": "great_basin",
+        "name": "Великая лощина",
+        "x": 70,
+        "z": -40,
+        "r": 46,
+        "depth": 9,
+        "_comment": "сюда приходит вода"
+      },
+      {
+        "type": "basin",
+        "id": "twin_pond_a",
+        "name": "Пруды-близнецы",
+        "x": -60,
+        "z": 55,
+        "r": 24,
+        "depth": 6
+      },
+      {
+        "type": "basin",
+        "id": "twin_pond_b",
+        "x": -30,
+        "z": 80,
+        "r": 18,
+        "depth": 5
+      },
+      {
+        "type": "crater",
+        "id": "crater",
+        "name": "Кратер Старого удара",
+        "x": -95,
+        "z": -70,
+        "r": 30,
+        "depth": 8,
+        "rim": 5
+      },
+      {
+        "type": "ridge",
+        "id": "north_ridge",
+        "x1": -150,
+        "z1": -140,
+        "x2": 120,
+        "z2": -150,
+        "w": 30,
+        "h": 18
+      },
+      {
+        "type": "canyon",
+        "id": "frost_canyon",
+        "name": "Морозный каньон",
+        "x1": 60,
+        "z1": 60,
+        "x2": 150,
+        "z2": 140,
+        "w": 16,
+        "depth": 10
+      },
+      {
+        "type": "canyon",
+        "id": "icarus_rift",
+        "name": "Разлом Икара",
+        "x1": -118,
+        "z1": -8,
+        "x2": -126,
+        "z2": 128,
+        "w": 13,
+        "depth": 26,
+        "taper": true,
+        "_comment": "пологий вход с юга, на севере — дно 26 м с разбитым кораблём"
+      },
+      {
+        "type": "mesa",
+        "id": "table_mount",
+        "name": "Столовая гора",
+        "x": 28,
+        "z": 122,
+        "r": 15,
+        "h": 11,
+        "_comment": "отвесные стены: наверх только с джетпаком"
+      },
+      {
+        "type": "cavern",
+        "id": "ice_cavern",
+        "name": "Грот льда",
+        "x": -22,
+        "z": -131,
+        "r": 11,
+        "h": 12,
+        "gap": 1.5707963267948966
+      }
+    ],
+    "water": {
+      "min_level": -12,
+      "max_level": 1.2,
+      "_comment": "уровень воды растёт по стадии вода: от min (сухо) до max (озёра в лощинах)"
+    },
+    "zones": [
+      {
+        "id": "frozen_valley",
+        "name": "Ледяная долина",
+        "x": 115,
+        "z": 115,
+        "r": 40,
+        "gate": {
+          "stat": "heat",
+          "value": 150
+        },
+        "rich": [
+          "res_titanium",
+          "res_uranium"
+        ],
+        "_comment": "закрыта ледяной стеной, пока тепло < 35 кПа-эквивалента",
+        "ice_ring": true
+      },
+      {
+        "id": "crater_floor",
+        "name": "Дно кратера",
+        "x": -95,
+        "z": -70,
+        "r": 22,
+        "gate": {
+          "stat": "pressure",
+          "value": 80
+        },
+        "storm": true,
+        "rich": [
+          "res_uranium",
+          "res_silicon"
+        ],
+        "_comment": "пыльная буря не пускает внутрь, пока давление низкое"
+      }
+    ],
+    "resources": {
+      "_comment": "Сколько точек добычи каждого вида разбросать и где (bias: plains|basin|ridge|zone:<id>)",
+      "res_iron": {
+        "count": 45,
+        "bias": "plains"
+      },
+      "res_silicon": {
+        "count": 35,
+        "bias": "ridge"
+      },
+      "res_ice": {
+        "count": 30,
+        "bias": "basin"
+      },
+      "res_titanium": {
+        "count": 14,
+        "bias": "zone:frozen_valley"
+      },
+      "res_uranium": {
+        "count": 8,
+        "bias": "zone:crater_floor"
+      },
+      "res_berry": {
+        "count": 90,
+        "bias": "plains",
+        "min_flora": 0.45,
+        "_comment": "кусты-ягодники появляются с зеленью"
+      },
+      "res_cobalt": {
+        "count": 10,
+        "bias": "poi:cobalt"
+      },
+      "res_iron@base": {
+        "res": "res_iron",
+        "count": 14,
+        "bias": "near:16:45"
+      },
+      "res_cobalt@base": {
+        "res": "res_cobalt",
+        "count": 5,
+        "bias": "near:30:60"
+      },
+      "res_silicon@start": {
+        "res": "res_silicon",
+        "count": 3,
+        "bias": "near:6:12:-4:4"
+      },
+      "res_iron@start": {
+        "res": "res_iron",
+        "count": 3,
+        "bias": "near:6:12:-4:4"
+      }
+    },
+    "decor": {
+      "boulder": 70,
+      "rocks": 140
+    },
+    "props": [
+      {
+        "model": "lander",
+        "x": -8,
+        "z": -6,
+        "rot": 0.5
+      }
+    ],
+    "pois": [
+      {
+        "id": "starter_crate",
+        "type": "crate",
+        "x": 7,
+        "z": 17,
+        "table": "crate_starter",
+        "name": "Сброшенный контейнер"
+      },
+      {
+        "id": "wreck",
+        "type": "ship",
+        "x": -124,
+        "z": 118,
+        "name": "Разбитый «Икар»",
+        "dungeon": {
+          "seed": 71,
+          "size": [
+            5,
+            5
+          ],
+          "palette": "ship",
+          "table": "station",
+          "vault": "vault",
+          "crates": 4,
+          "bodies": 2
+        }
+      },
+      {
+        "id": "station",
+        "type": "station",
+        "x": 112,
+        "z": -96,
+        "name": "Обломок станции «Заря»",
+        "dungeon": {
+          "seed": 13,
+          "size": [
+            7,
+            6
+          ],
+          "palette": "station",
+          "table": "station",
+          "vault": "vault",
+          "crates": 6,
+          "bodies": 3
+        }
+      },
+      {
+        "id": "ice_cave",
+        "type": "ice_cave",
+        "x": -22,
+        "z": -118.0,
+        "rot": 0,
+        "name": "Пещера Тысячелетнего льда",
+        "gate": {
+          "stat": "heat",
+          "value": 320
+        },
+        "dungeon": {
+          "seed": 5,
+          "size": [
+            6,
+            5
+          ],
+          "palette": "ice",
+          "table": "station",
+          "vault": "relic",
+          "crates": 3,
+          "bodies": 1
+        }
+      },
+      {
+        "id": "mesa_top",
+        "type": "crate",
+        "x": 28,
+        "z": 122,
+        "table": "mesa",
+        "name": "Тайник на Столовой горе",
+        "on_mesa": true
+      }
+    ],
+    "debris": {
+      "crates": 9,
+      "bodies": 6,
+      "min_dist": 75
+    },
+    "terrace": {
+      "step": 2.6,
+      "sharp": 0.12,
+      "amount": 1.0
+    },
+    "faceted": true,
+    "water_color": "#3fbfa5",
+    "dome_wreck": [
+      {
+        "id": "dw_a",
+        "model": "dome_wreck1",
+        "x": 4,
+        "z": -2,
+        "rot": 0.4,
+        "name": "Обломки купола",
+        "give": {
+          "dome_part": 2
+        },
+        "scale": 1.0,
+        "tilt": 0.18
+      },
+      {
+        "id": "dw_b",
+        "model": "dome_wreck2",
+        "x": -14,
+        "z": 6,
+        "rot": 2.3,
+        "name": "Разбитый шлюз",
+        "give": {
+          "dome_part": 2
+        },
+        "scale": 1.0,
+        "tilt": -0.2
+      },
+      {
+        "id": "dw_c",
+        "model": "dome_wreck1",
+        "x": -1,
+        "z": -16,
+        "rot": 3.6,
+        "scale": 0.8,
+        "name": "Секция купола",
+        "give": {
+          "dome_part": 1
+        },
+        "tilt": 0.25
+      },
+      {
+        "id": "dw_d",
+        "model": "dome_wreck2",
+        "x": -20,
+        "z": -12,
+        "rot": 5.0,
+        "scale": 0.85,
+        "name": "Обломки шлюза",
+        "give": {
+          "dome_part": 1
+        },
+        "tilt": -0.15
+      }
+    ]
+  },
+  "terraform": {
+    "_comment": "Индекс терраформирования Ti = сумма параметров. Каждый параметр копится от машин (в ед./с). Стадии — пороги Ti, они меняют небо, землю, воду, флору.",
+    "stats": {
+      "heat": {
+        "name": "Тепло",
+        "unit": "нК",
+        "icon": "🔥"
+      },
+      "pressure": {
+        "name": "Давление",
+        "unit": "мПа",
+        "icon": "💨"
+      },
+      "oxygen": {
+        "name": "Кислород",
+        "unit": "ppm",
+        "icon": "🫧"
+      },
+      "biomass": {
+        "name": "Биомасса",
+        "unit": "г",
+        "icon": "🌱"
+      }
+    },
+    "stages": [
+      {
+        "ti": 0,
+        "name": "Мёртвая пустыня",
+        "sky": [
+          "#4e1a18",
+          "#e0875a"
+        ],
+        "fog": "#c46a45",
+        "fog_density": 0.014,
+        "sun": "#ffc890",
+        "ground": [
+          "#d9925c",
+          "#a8482c"
+        ],
+        "water": 0,
+        "flora": 0,
+        "rain": 0,
+        "clouds": 0
+      },
+      {
+        "ti": 12,
+        "name": "Голубеющее небо",
+        "sky": [
+          "#5f95d8",
+          "#f2b48a"
+        ],
+        "fog": "#d9a088",
+        "fog_density": 0.0085,
+        "sun": "#fff4e0",
+        "ground": [
+          "#c98a5a",
+          "#9a4e30"
+        ],
+        "water": 0,
+        "flora": 0,
+        "rain": 0,
+        "clouds": 0.55
+      },
+      {
+        "ti": 60,
+        "name": "Первые лужи",
+        "sky": [
+          "#6f9fd8",
+          "#d6d8d6"
+        ],
+        "fog": "#c8c0b4",
+        "fog_density": 0.007,
+        "sun": "#fff6e8",
+        "ground": [
+          "#c98a5a",
+          "#9a4e30"
+        ],
+        "water": 0,
+        "flora": 0,
+        "rain": 0.3,
+        "clouds": 0.4
+      },
+      {
+        "ti": 180,
+        "name": "Мох и лишайники",
+        "sky": [
+          "#5a92dc",
+          "#c6dcef"
+        ],
+        "fog": "#b9c9d6",
+        "fog_density": 0.006,
+        "sun": "#ffffff",
+        "ground": [
+          "#b48558",
+          "#8a5232"
+        ],
+        "water": 0,
+        "flora": 0,
+        "rain": 0.5,
+        "clouds": 0.55
+      },
+      {
+        "ti": 420,
+        "name": "Пруды и травы",
+        "sky": [
+          "#5a92dc",
+          "#bcd8f2"
+        ],
+        "fog": "#b2cbe0",
+        "fog_density": 0.005,
+        "sun": "#fff3dd",
+        "ground": [
+          "#7d7048",
+          "#4f7a3a"
+        ],
+        "water": 0,
+        "flora": 0,
+        "rain": 0.4,
+        "clouds": 0.5
+      },
+      {
+        "ti": 800,
+        "name": "Живая планета",
+        "sky": [
+          "#4b8be0",
+          "#b4d6f5"
+        ],
+        "fog": "#a9c8e2",
+        "fog_density": 0.004,
+        "sun": "#fff1d0",
+        "ground": [
+          "#6f7a46",
+          "#3f8a3e"
+        ],
+        "water": 0,
+        "flora": 0,
+        "rain": 0.25,
+        "clouds": 0.45
+      }
+    ],
+    "flora_models": [
+      {
+        "model": "lichen",
+        "from": 0.05,
+        "count": 900,
+        "near": "any",
+        "size": 2.2
+      },
+      {
+        "model": "grass",
+        "from": 0.3,
+        "count": 2200,
+        "near": "any"
+      },
+      {
+        "model": "bush",
+        "from": 0.5,
+        "count": 260,
+        "near": "water"
+      },
+      {
+        "model": "tree",
+        "from": 0.62,
+        "count": 200,
+        "near": "water"
+      },
+      {
+        "model": "succulent",
+        "from": 0.12,
+        "count": 180,
+        "near": "any",
+        "size": 2.2
+      },
+      {
+        "model": "reed",
+        "from": 0.32,
+        "count": 420,
+        "near": "water"
+      },
+      {
+        "model": "flowers",
+        "from": 0.42,
+        "count": 520,
+        "near": "any"
+      },
+      {
+        "model": "mushroom_tree",
+        "from": 0.7,
+        "count": 45,
+        "near": "any"
+      },
+      {
+        "model": "algae",
+        "from": 0.08,
+        "count": 500,
+        "near": "in_water",
+        "size": 0.9
+      }
+    ],
+    "breathable_ti": 800,
+    "kick_until": 14,
+    "kick_mul": 8,
+    "speed": 1.0,
+    "bio_flora": [
+      [
+        0,
+        0
+      ],
+      [
+        2,
+        0.08
+      ],
+      [
+        10,
+        0.2
+      ],
+      [
+        40,
+        0.45
+      ],
+      [
+        120,
+        0.75
+      ],
+      [
+        300,
+        1
+      ]
+    ],
+    "bio_water": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        0.06
+      ],
+      [
+        8,
+        0.15
+      ],
+      [
+        30,
+        0.4
+      ],
+      [
+        100,
+        0.75
+      ],
+      [
+        250,
+        1
+      ]
+    ],
+    "flora_from_stage": 3
+  },
+  "survival": {
+    "o2_max": 30,
+    "o2_drain": 0.5,
+    "o2_refill_safe": 12,
+    "hp_max": 100,
+    "hp_drain_no_o2": 4,
+    "hp_regen_safe": 0,
+    "storm_damage": 8,
+    "fall_speed_damage": 14,
+    "_comment": "O₂ 0.5/с вне купола (1 ед. = 2 с; бег ×1.5, буря ×1.6). У фабрикатора и в куполе O₂ не тратится и восполняется. На 0 O₂ утекает HP 4/с. На стадии breathable дышать можно без шлема.",
+    "o2_run_mul": 1.5,
+    "bench_safe_r": 5,
+    "fall_height_damage": 7,
+    "fall_damage": 30
+  },
+  "player": {
+    "walk": 6.5,
+    "run": 10,
+    "jump": 6.5,
+    "gravity": 14,
+    "mine_time": 1.2,
+    "reach": 3.2,
+    "inventory_slots": 16,
+    "stack": 15,
+    "jet_height": 3.2
+  },
+  "items": {
+    "iron": {
+      "name": "Железо",
+      "color": "#b4532a",
+      "from": "res_iron",
+      "rarity": "common"
+    },
+    "silicon": {
+      "name": "Кремний",
+      "color": "#cfd6de",
+      "from": "res_silicon",
+      "rarity": "common"
+    },
+    "titanium": {
+      "name": "Титан",
+      "color": "#9aa4b0",
+      "from": "res_titanium",
+      "rarity": "uncommon"
+    },
+    "ice": {
+      "name": "Лёд",
+      "color": "#bfe8ff",
+      "from": "res_ice",
+      "rarity": "common"
+    },
+    "uranium": {
+      "name": "Уран",
+      "color": "#6dff6a",
+      "from": "res_uranium",
+      "rarity": "uncommon"
+    },
+    "o2_tank": {
+      "name": "Баллон O₂",
+      "color": "#6fe3ff",
+      "use": {
+        "o2": 24
+      },
+      "rarity": "common"
+    },
+    "medkit": {
+      "name": "Аптечка",
+      "color": "#ff6b6b",
+      "use": {
+        "hp": 50
+      },
+      "rarity": "common"
+    },
+    "seeds": {
+      "name": "Семена",
+      "color": "#5fbf5a",
+      "rarity": "common"
+    },
+    "berries": {
+      "name": "Ягоды",
+      "color": "#ff5d8f",
+      "from": "res_berry",
+      "food": 2,
+      "rarity": "common"
+    },
+    "food_brick": {
+      "name": "Брикет корма",
+      "color": "#e8b04a",
+      "food": 6,
+      "rarity": "common"
+    },
+    "cobalt": {
+      "name": "Кобальт",
+      "color": "#3d7bff",
+      "from": "res_cobalt",
+      "rarity": "rare"
+    },
+    "astro": {
+      "name": "Астрокристалл",
+      "color": "#b86bff",
+      "from": "res_crystal",
+      "rarity": "epic",
+      "desc": "Осколки метеоритов. Нужен для снаряжения высоких тиров"
+    },
+    "star_core": {
+      "name": "Звёздное ядро",
+      "color": "#ffcf4a",
+      "rarity": "legendary",
+      "desc": "Сердце метеорита. Особый материал для легендарного снаряжения и построек"
+    },
+    "lamp": {
+      "name": "Фонарь",
+      "color": "#ffe9a8",
+      "rarity": "common",
+      "desc": "Поставь (F), чтобы осветить тёмные отсеки и ночь"
+    },
+    "scrap": {
+      "name": "Обломки сплава",
+      "color": "#8a9099",
+      "rarity": "common",
+      "desc": "Лом со станций и кораблей"
+    },
+    "data_core": {
+      "name": "Блок данных",
+      "color": "#6fe3ff",
+      "rarity": "rare",
+      "desc": "Записи экипажа. Ценен для исследований"
+    },
+    "bp_backpack_2": {
+      "name": "Чертёж: Рюкзак II",
+      "color": "#ffffff",
+      "rarity": "uncommon",
+      "bp": "backpack:1"
+    },
+    "bp_backpack_3": {
+      "name": "Чертёж: Рюкзак III",
+      "color": "#ffffff",
+      "rarity": "rare",
+      "bp": "backpack:2"
+    },
+    "bp_backpack_4": {
+      "name": "Чертёж: Рюкзак IV",
+      "color": "#ffffff",
+      "rarity": "epic",
+      "bp": "backpack:3"
+    },
+    "bp_backpack_5": {
+      "name": "Чертёж: Рюкзак V",
+      "color": "#ffffff",
+      "rarity": "legendary",
+      "bp": "backpack:4"
+    },
+    "bp_suit_2": {
+      "name": "Чертёж: Скафандр II",
+      "color": "#ffffff",
+      "rarity": "uncommon",
+      "bp": "suit:1"
+    },
+    "bp_suit_3": {
+      "name": "Чертёж: Скафандр III",
+      "color": "#ffffff",
+      "rarity": "rare",
+      "bp": "suit:2"
+    },
+    "bp_suit_4": {
+      "name": "Чертёж: Скафандр IV",
+      "color": "#ffffff",
+      "rarity": "epic",
+      "bp": "suit:3"
+    },
+    "bp_suit_5": {
+      "name": "Чертёж: Скафандр V",
+      "color": "#ffffff",
+      "rarity": "legendary",
+      "bp": "suit:4"
+    },
+    "bp_tool_2": {
+      "name": "Чертёж: Резак II",
+      "color": "#ffffff",
+      "rarity": "uncommon",
+      "bp": "tool:1"
+    },
+    "bp_tool_3": {
+      "name": "Чертёж: Резак III",
+      "color": "#ffffff",
+      "rarity": "rare",
+      "bp": "tool:2"
+    },
+    "bp_tool_4": {
+      "name": "Чертёж: Резак IV",
+      "color": "#ffffff",
+      "rarity": "epic",
+      "bp": "tool:3"
+    },
+    "bp_jet_1": {
+      "name": "Чертёж: Джетпак I",
+      "color": "#ffffff",
+      "rarity": "rare",
+      "bp": "jet:1"
+    },
+    "bp_jet_2": {
+      "name": "Чертёж: Джетпак II",
+      "color": "#ffffff",
+      "rarity": "epic",
+      "bp": "jet:2"
+    },
+    "bp_jet_3": {
+      "name": "Чертёж: Джетпак III",
+      "color": "#ffffff",
+      "rarity": "legendary",
+      "bp": "jet:3"
+    },
+    "dome_part": {
+      "name": "Секция купола",
+      "color": "#bfe6ff",
+      "rarity": "uncommon",
+      "desc": "Уцелевшая секция купола: стекло, рёбра, уплотнители. Из 6 штук собирается купол базы"
+    }
+  },
+  "recipes": [
+    {
+      "id": "base_dome",
+      "name": "Купол базы",
+      "build": "__dome",
+      "cost": {
+        "dome_part": 6
+      },
+      "time": 0,
+      "tier": 0,
+      "once": true,
+      "no_bench": true,
+      "desc": "герметичный купол со шлюзом. Внутри уже стоят фабрикатор и сундук. Строится один раз"
+    },
+    {
+      "id": "o2_tank",
+      "out": "o2_tank",
+      "count": 1,
+      "cost": {
+        "ice": 2,
+        "iron": 1
+      },
+      "time": 4,
+      "tier": 0
+    },
+    {
+      "id": "medkit",
+      "out": "medkit",
+      "count": 1,
+      "cost": {
+        "silicon": 2,
+        "ice": 1
+      },
+      "time": 5,
+      "tier": 0
+    },
+    {
+      "id": "lamp",
+      "out": "lamp",
+      "count": 2,
+      "cost": {
+        "iron": 1,
+        "silicon": 1
+      },
+      "time": 3,
+      "tier": 0
+    },
+    {
+      "id": "heater",
+      "name": "Обогреватель",
+      "build": "heater",
+      "cost": {
+        "iron": 6,
+        "silicon": 2
+      },
+      "time": 8,
+      "tier": 0,
+      "gives": {
+        "heat": 0.025
+      },
+      "desc": "Греет атмосферу"
+    },
+    {
+      "id": "drill",
+      "name": "Бур-испаритель",
+      "build": "drill",
+      "cost": {
+        "iron": 7,
+        "ice": 4
+      },
+      "time": 10,
+      "tier": 0,
+      "gives": {
+        "pressure": 0.025
+      },
+      "desc": "Испаряет грунт — давление"
+    },
+    {
+      "id": "oxygen_gen",
+      "name": "Генератор O₂",
+      "build": "oxygen_gen",
+      "cost": {
+        "silicon": 7,
+        "ice": 5,
+        "iron": 3
+      },
+      "time": 12,
+      "tier": 1,
+      "unlock_ti": 12,
+      "gives": {
+        "oxygen": 0.03
+      },
+      "desc": "Кислород в атмосферу"
+    },
+    {
+      "id": "seeds",
+      "out": "seeds",
+      "count": 2,
+      "cost": {
+        "ice": 3,
+        "silicon": 1
+      },
+      "time": 6,
+      "tier": 1,
+      "unlock_ti": 60
+    },
+    {
+      "id": "greenhouse",
+      "name": "Теплица",
+      "build": "greenhouse",
+      "cost": {
+        "silicon": 8,
+        "iron": 5,
+        "seeds": 2
+      },
+      "time": 15,
+      "tier": 2,
+      "unlock_ti": 60,
+      "gives": {
+        "biomass": 0.04,
+        "oxygen": 0.012
+      },
+      "desc": "Биомасса и кислород"
+    },
+    {
+      "id": "heater_t2",
+      "name": "Плазменный обогреватель",
+      "build": "heater_t2",
+      "cost": {
+        "titanium": 4,
+        "iron": 10,
+        "silicon": 6
+      },
+      "time": 20,
+      "tier": 2,
+      "unlock_ti": 60,
+      "gives": {
+        "heat": 0.1
+      },
+      "desc": "×5 тепла"
+    },
+    {
+      "id": "drill_t2",
+      "name": "Глубинный бур",
+      "build": "drill_t2",
+      "cost": {
+        "titanium": 5,
+        "iron": 12,
+        "ice": 8
+      },
+      "time": 22,
+      "tier": 2,
+      "unlock_ti": 60,
+      "gives": {
+        "pressure": 0.1
+      },
+      "desc": "×5 давления"
+    },
+    {
+      "id": "oxygen_t2",
+      "name": "Кислородная башня",
+      "build": "oxygen_t2",
+      "cost": {
+        "titanium": 5,
+        "silicon": 12,
+        "uranium": 1
+      },
+      "time": 25,
+      "tier": 3,
+      "unlock_ti": 180,
+      "gives": {
+        "oxygen": 0.12
+      },
+      "desc": "×5 кислорода"
+    },
+    {
+      "id": "biodome",
+      "name": "Биокупол",
+      "build": "biodome",
+      "cost": {
+        "titanium": 6,
+        "silicon": 14,
+        "seeds": 4,
+        "uranium": 1
+      },
+      "time": 30,
+      "tier": 3,
+      "unlock_ti": 180,
+      "gives": {
+        "biomass": 0.16,
+        "oxygen": 0.04
+      },
+      "desc": "×5 биомассы"
+    },
+    {
+      "id": "heater2",
+      "name": "Урановый реактор тепла",
+      "build": "heater",
+      "cost": {
+        "titanium": 8,
+        "uranium": 3,
+        "iron": 16
+      },
+      "time": 35,
+      "tier": 3,
+      "unlock_ti": 420,
+      "gives": {
+        "heat": 0.3
+      },
+      "desc": "×16 тепла"
+    },
+    {
+      "id": "food_brick",
+      "out": "food_brick",
+      "count": 2,
+      "cost": {
+        "seeds": 1,
+        "ice": 2
+      },
+      "time": 6,
+      "tier": 2,
+      "unlock_life": 0
+    },
+    {
+      "id": "feeder",
+      "name": "Кормушка",
+      "build": "feeder",
+      "cost": {
+        "iron": 5,
+        "silicon": 2
+      },
+      "time": 8,
+      "unlock_life": 0,
+      "desc": "Еда для рода: +6 к лимиту, без еды род не растёт"
+    },
+    {
+      "id": "incubator",
+      "name": "Инкубатор",
+      "build": "incubator",
+      "cost": {
+        "iron": 8,
+        "silicon": 6,
+        "titanium": 2
+      },
+      "time": 15,
+      "unlock_life": 0,
+      "once": true,
+      "desc": "Здесь вылупляется следующее поколение"
+    },
+    {
+      "id": "nest",
+      "name": "Логово",
+      "build": "nest",
+      "cost": {
+        "ice": 4,
+        "silicon": 3,
+        "seeds": 1
+      },
+      "time": 10,
+      "unlock_life": 1,
+      "desc": "Дом для зверьков: +10 к лимиту"
+    },
+    {
+      "id": "campfire",
+      "name": "Костёр племени",
+      "build": "campfire",
+      "cost": {
+        "iron": 10,
+        "titanium": 4,
+        "uranium": 1
+      },
+      "time": 20,
+      "unlock_life": 3,
+      "once": true,
+      "desc": "Сердце племени: дары и задания старейшины"
+    },
+    {
+      "id": "hut",
+      "name": "Шатёр",
+      "build": "hut",
+      "cost": {
+        "iron": 8,
+        "silicon": 8,
+        "seeds": 2
+      },
+      "time": 18,
+      "unlock_life": 3,
+      "desc": "Дом для семьи: +20 к лимиту"
+    },
+    {
+      "id": "chest",
+      "name": "Сундук",
+      "build": "chest",
+      "cost": {
+        "iron": 3,
+        "silicon": 1
+      },
+      "time": 4,
+      "tier": 0,
+      "storage": 12,
+      "desc": "12 ячеек для ресурсов",
+      "indoor": true
+    },
+    {
+      "id": "workbench",
+      "name": "Фабрикатор",
+      "build": "workbench",
+      "cost": {
+        "iron": 8,
+        "silicon": 4
+      },
+      "time": 6,
+      "tier": 0,
+      "indoor": true,
+      "desc": "второй крафт-пункт: ставь в куполе или модуле"
+    }
+  ],
+  "monetization": {
+    "_comment": "Где реклама и что продаём. Рантайм показывает кнопки в нужный момент.",
+    "rewarded": {
+      "revive_keep": {
+        "label": "Очнуться с вещами",
+        "when": "смерть: иначе теряешь половину ресурсов"
+      },
+      "double_mine": {
+        "label": "x2 добыча на 2 мин",
+        "duration": 120,
+        "cooldown_sec": 240
+      },
+      "instant_craft": {
+        "label": "Мгновенно",
+        "when": "крафт > 6 с"
+      },
+      "o2_refill": {
+        "label": "+100 O₂",
+        "when": "O₂ < 25% вдали от купола",
+        "cooldown_sec": 120
+      },
+      "offline_x2": {
+        "label": "x2 за время отсутствия",
+        "when": "вход после паузы > 5 мин"
+      },
+      "meteor_cache": {
+        "label": "Вскрыть ядро метеорита"
+      },
+      "hatch_skip": {
+        "label": "−30 мин высиживания"
+      },
+      "trait_reroll": {
+        "label": "Другие варианты"
+      },
+      "gift_x2": {
+        "label": "x2 дары"
+      },
+      "bless_ad": {
+        "label": "Благословение рода 30 мин",
+        "duration": 1800,
+        "cooldown_sec": 3600
+      },
+      "loot_reroll": {
+        "label": "Ещё предмет из тайника",
+        "cooldown_sec": 300
+      }
+    },
+    "interstitial": {
+      "on": [
+        "sleep",
+        "teleport"
+      ],
+      "min_interval_sec": 180
+    },
+    "iap": [
+      {
+        "id": "starter_pack",
+        "title": "Набор колониста",
+        "desc": "Бур T2 (x2 скорость добычи), 3 баллона O₂, 20 железа",
+        "price": "79 ₽",
+        "once": true,
+        "grant": {
+          "flags": [
+            "fast_mine"
+          ],
+          "items": {
+            "o2_tank": 3,
+            "iron": 20
+          }
+        },
+        "best": true
+      },
+      {
+        "id": "big_backpack",
+        "title": "Большой рюкзак",
+        "desc": "+4 слота к любому рюкзаку",
+        "price": "99 ₽",
+        "once": true,
+        "grant": {
+          "flags": [
+            "big_backpack"
+          ]
+        }
+      },
+      {
+        "id": "ti_boost",
+        "title": "Солнечное зеркало",
+        "desc": "x2 скорость терраформирования на 30 мин",
+        "price": "49 ₽",
+        "grant": {
+          "boost_ti_sec": 1800
+        }
+      },
+      {
+        "id": "no_ads",
+        "title": "Без рекламы",
+        "desc": "Без межстраничной рекламы навсегда",
+        "price": "199 ₽",
+        "once": true,
+        "grant": {
+          "flags": [
+            "no_ads"
+          ]
+        }
+      },
+      {
+        "id": "suit_gold",
+        "title": "Скафандр «Золотой век»",
+        "desc": "Косметика: золотой скафандр",
+        "price": "59 ₽",
+        "once": true,
+        "grant": {
+          "flags": [
+            "suit_gold"
+          ]
+        }
+      },
+      {
+        "id": "tribe_pack",
+        "title": "Набор вождя",
+        "desc": "Автокормушки навсегда + 120 💎 + редкая черта при следующем вылуплении",
+        "price": "149 ₽",
+        "once": true,
+        "best": true,
+        "grant": {
+          "flags": [
+            "auto_feeder",
+            "rare_next"
+          ],
+          "crystals": 120
+        },
+        "life": true
+      },
+      {
+        "id": "auto_feeder",
+        "title": "Автокормушки",
+        "desc": "Кормушки никогда не пустеют, род растёт, пока тебя нет",
+        "price": "99 ₽",
+        "once": true,
+        "grant": {
+          "flags": [
+            "auto_feeder"
+          ]
+        },
+        "life": true
+      },
+      {
+        "id": "bless_day",
+        "title": "Благословение рода",
+        "desc": "x2 биомасса на 24 часа",
+        "price": "59 ₽",
+        "grant": {
+          "bless_sec": 86400
+        },
+        "life": true
+      },
+      {
+        "id": "crystals_s",
+        "title": "Горсть кристаллов",
+        "desc": "60 💎",
+        "price": "39 ₽",
+        "grant": {
+          "crystals": 60
+        }
+      },
+      {
+        "id": "crystals_m",
+        "title": "Мешок кристаллов",
+        "desc": "200 💎 (+25%)",
+        "price": "99 ₽",
+        "grant": {
+          "crystals": 200
+        }
+      },
+      {
+        "id": "crystals_l",
+        "title": "Сундук кристаллов",
+        "desc": "700 💎 (+50%)",
+        "price": "299 ₽",
+        "grant": {
+          "crystals": 700
+        }
+      },
+      {
+        "id": "outfits",
+        "title": "Наряды племени",
+        "desc": "Праздничные туники для кошкодевочек",
+        "price": "79 ₽",
+        "once": true,
+        "grant": {
+          "flags": [
+            "outfits"
+          ]
+        },
+        "life": true
+      }
+    ]
+  },
+  "texts": {
+    "o2": "O₂",
+    "hp": "HP",
+    "ti": "Индекс терраформирования",
+    "mine": "Добыть",
+    "craft": "Фабрикатор",
+    "build": "Построить",
+    "place": "Поставить",
+    "cancel": "Отмена",
+    "inventory_full": "Рюкзак полон",
+    "need": "Нужно",
+    "locked_ti": "Откроется при Ti",
+    "gate_ice": "Лёд не растает, пока не станет теплее",
+    "gate_storm": "Пыльная буря. Нужно давление выше",
+    "dead": "Задохнулся…",
+    "respawn": "Очнуться на базе (−50% ресурсов)",
+    "stage_new": "Новая эпоха планеты",
+    "safe": "Купол: O₂ восполняется",
+    "low_o2": "Мало кислорода!",
+    "store": "Магазин",
+    "watch": "Смотреть",
+    "bi": "Индекс биомассы",
+    "pet": "Погладить",
+    "fill": "Положить еду",
+    "gather": "Собрать",
+    "hatch": "Вылупить",
+    "evo": "Род",
+    "life_born": "В пруду зародилась жизнь!",
+    "need_incubator": "Построй инкубатор для нового поколения",
+    "egg_ready": "Новое поколение готово к рождению!",
+    "hungry": "Род голодает — наполни кормушки",
+    "build_menu": "Строительство",
+    "lamp_place": "Фонарь",
+    "enter": "Войти",
+    "exit": "Выйти наружу",
+    "open": "Открыть",
+    "chest": "Сундук",
+    "stash": "Ящик",
+    "stash_tip": "Рюкзак полон! Сложи лишнее в сундук в куполе — подойди к нему и нажми E. Крафт берёт ресурсы и из сундуков базы."
+  },
+  "build_cost_growth": 1.3,
+  "evolution": {
+    "_comment": "Индекс биомассы Bi растёт от популяции рода. Пороги — эпохи. После деревни — бесконечные уровни деревни.",
+    "start_ti": 120,
+    "stages": [
+      {
+        "id": "fish",
+        "name": "Фенечки-водомерки",
+        "bi": 0,
+        "model": "catfish",
+        "habitat": "water",
+        "cap": 10,
+        "rate": 0.006,
+        "hatch_min": 0
+      },
+      {
+        "id": "critter",
+        "name": "Фенечата",
+        "bi": 150,
+        "model": "critter",
+        "habitat": "shore",
+        "cap": 12,
+        "rate": 0.006,
+        "hatch_min": 5,
+        "char": "fox_kit"
+      },
+      {
+        "id": "kitten",
+        "name": "Фенеки",
+        "bi": 650,
+        "model": "kitten",
+        "habitat": "land",
+        "cap": 18,
+        "rate": 0.007,
+        "hatch_min": 20,
+        "char": "fox_teen"
+      },
+      {
+        "id": "catgirl",
+        "name": "Лисы-мастера",
+        "bi": 2400,
+        "model": "catgirl",
+        "habitat": "tribe",
+        "cap": 16,
+        "rate": 0.008,
+        "hatch_min": 60,
+        "char": "fox_adult"
+      },
+      {
+        "id": "village",
+        "name": "Деревня лисов",
+        "bi": 7000,
+        "model": "catgirl",
+        "habitat": "tribe",
+        "cap": 24,
+        "rate": 0.009,
+        "hatch_min": 180,
+        "char": "fox_adult"
+      }
+    ],
+    "village_levels": {
+      "base": 7000,
+      "growth": 1.55,
+      "_comment": "уровень L деревни требует base*growth^L Bi"
+    },
+    "capacity": {
+      "feeder": 6,
+      "nest": 10,
+      "hut": 20,
+      "campfire": 10,
+      "flora": 14
+    },
+    "growth": 0.004,
+    "food_per_pop": 0.0009,
+    "feeder_max": 40,
+    "unfed_rate": 0.2,
+    "offline_rate": 0.5,
+    "pet_dna": 1,
+    "pet_cooldown": 40,
+    "render_max": 34,
+    "skip_ad_min": 30,
+    "skip_crystal_per_10min": 3,
+    "gifts": {
+      "every_min": 120,
+      "grant": {
+        "titanium": 3,
+        "uranium": 1,
+        "iron": 10,
+        "crystals": 2
+      }
+    },
+    "traits": [
+      {
+        "id": "ginger",
+        "name": "Рыжая шерсть",
+        "desc": "+8% биомассы",
+        "bonus": {
+          "bi": 0.08
+        },
+        "fur": "#f2964a",
+        "accent": "#fff3e0"
+      },
+      {
+        "id": "snow",
+        "name": "Снежная шерсть",
+        "desc": "−12% расход еды",
+        "bonus": {
+          "food": -0.12
+        },
+        "fur": "#f4f4f7",
+        "accent": "#9fb7d9"
+      },
+      {
+        "id": "smoke",
+        "name": "Дымчатая шерсть",
+        "desc": "+10% к лимиту рода",
+        "bonus": {
+          "cap": 0.1
+        },
+        "fur": "#8d93a3",
+        "accent": "#e8e8f0"
+      },
+      {
+        "id": "black",
+        "name": "Чёрная шерсть",
+        "desc": "+15% ДНК за ласку",
+        "bonus": {
+          "dna": 0.15
+        },
+        "fur": "#2f2b33",
+        "accent": "#ffd166"
+      },
+      {
+        "id": "calico",
+        "name": "Трёхцветная",
+        "desc": "+5% биомассы, +5% лимит",
+        "bonus": {
+          "bi": 0.05,
+          "cap": 0.05
+        },
+        "fur": "#fff1de",
+        "accent": "#d9763a"
+      },
+      {
+        "id": "lynx",
+        "name": "Ушки рыси",
+        "desc": "+12% роста популяции",
+        "bonus": {
+          "growth": 0.12
+        }
+      },
+      {
+        "id": "purr",
+        "name": "Громкое мурчание",
+        "desc": "+10% биомассы",
+        "bonus": {
+          "bi": 0.1
+        }
+      },
+      {
+        "id": "fisher",
+        "name": "Рыболовы",
+        "desc": "−15% расход еды",
+        "bonus": {
+          "food": -0.15
+        }
+      },
+      {
+        "id": "curious",
+        "name": "Любопытные",
+        "desc": "+20% ДНК за ласку",
+        "bonus": {
+          "dna": 0.2
+        }
+      },
+      {
+        "id": "star",
+        "name": "Звёздная шерсть",
+        "desc": "+25% биомассы, светится",
+        "bonus": {
+          "bi": 0.25
+        },
+        "fur": "#5b6cff",
+        "accent": "#bfe9ff",
+        "rare": true,
+        "glow": true
+      },
+      {
+        "id": "sakura",
+        "name": "Сакура",
+        "desc": "+20% лимит, +10% био",
+        "bonus": {
+          "cap": 0.2,
+          "bi": 0.1
+        },
+        "fur": "#ffc4dc",
+        "accent": "#ff6fa5",
+        "rare": true
+      },
+      {
+        "id": "golden",
+        "name": "Золотой род",
+        "desc": "+30% ДНК, +15% био",
+        "bonus": {
+          "dna": 0.3,
+          "bi": 0.15
+        },
+        "fur": "#f2c94c",
+        "accent": "#fff6c9",
+        "rare": true,
+        "glow": true
+      }
+    ],
+    "trait_upgrade": {
+      "base": 20,
+      "growth": 1.45,
+      "per_level": 0.04,
+      "_comment": "уровень черты за ДНК: +4% к её бонусу за уровень, бесконечно"
+    },
+    "quests": [
+      {
+        "id": "pet",
+        "text": "Погладь сородичей",
+        "n": 5
+      },
+      {
+        "id": "feed",
+        "text": "Положи еду в кормушки",
+        "n": 12
+      },
+      {
+        "id": "berries",
+        "text": "Собери ягоды",
+        "n": 10
+      },
+      {
+        "id": "mine",
+        "text": "Добудь ресурсы",
+        "n": 15
+      },
+      {
+        "id": "build",
+        "text": "Построй что-нибудь",
+        "n": 1
+      }
+    ],
+    "quest_reward": {
+      "crystals": 3,
+      "dna": 8
+    },
+    "quest_bonus": {
+      "crystals": 10,
+      "dna": 25
+    }
+  },
+  "gear": {
+    "backpack": {
+      "name": "Рюкзак",
+      "icon": "🎒",
+      "stat": "slots",
+      "tiers": [
+        {
+          "v": 2
+        },
+        {
+          "v": 4,
+          "bp": "bp_backpack_2",
+          "cost": {
+            "iron": 6,
+            "silicon": 3
+          }
+        },
+        {
+          "v": 6,
+          "bp": "bp_backpack_3",
+          "cost": {
+            "titanium": 4,
+            "scrap": 4
+          }
+        },
+        {
+          "v": 9,
+          "bp": "bp_backpack_4",
+          "cost": {
+            "cobalt": 4,
+            "titanium": 6,
+            "astro": 2
+          }
+        },
+        {
+          "v": 12,
+          "bp": "bp_backpack_5",
+          "cost": {
+            "cobalt": 8,
+            "astro": 4,
+            "star_core": 1
+          }
+        }
+      ]
+    },
+    "suit": {
+      "name": "Скафандр",
+      "icon": "🧑‍🚀",
+      "stat": "o2",
+      "tiers": [
+        {
+          "v": 30
+        },
+        {
+          "v": 70,
+          "bp": "bp_suit_2",
+          "cost": {
+            "iron": 5,
+            "ice": 4,
+            "cobalt": 2
+          }
+        },
+        {
+          "v": 105,
+          "bp": "bp_suit_3",
+          "cost": {
+            "titanium": 5,
+            "silicon": 6
+          }
+        },
+        {
+          "v": 154,
+          "bp": "bp_suit_4",
+          "cost": {
+            "cobalt": 5,
+            "titanium": 6,
+            "astro": 2
+          }
+        },
+        {
+          "v": 224,
+          "bp": "bp_suit_5",
+          "cost": {
+            "cobalt": 8,
+            "astro": 5,
+            "star_core": 1
+          }
+        }
+      ]
+    },
+    "tool": {
+      "name": "Резак",
+      "icon": "⛏️",
+      "stat": "mine",
+      "tiers": [
+        {
+          "v": 1
+        },
+        {
+          "v": 1.5,
+          "bp": "bp_tool_2",
+          "cost": {
+            "iron": 8,
+            "silicon": 2
+          }
+        },
+        {
+          "v": 2.2,
+          "bp": "bp_tool_3",
+          "cost": {
+            "titanium": 4,
+            "uranium": 1
+          }
+        },
+        {
+          "v": 3,
+          "bp": "bp_tool_4",
+          "cost": {
+            "cobalt": 6,
+            "astro": 3
+          }
+        }
+      ]
+    },
+    "jet": {
+      "name": "Джетпак",
+      "icon": "🚀",
+      "stat": "fuel",
+      "tiers": [
+        {
+          "v": 0
+        },
+        {
+          "v": 1.0,
+          "bp": "bp_jet_1",
+          "cost": {
+            "titanium": 6,
+            "uranium": 2,
+            "scrap": 4
+          }
+        },
+        {
+          "v": 2.0,
+          "bp": "bp_jet_2",
+          "cost": {
+            "cobalt": 6,
+            "astro": 3
+          }
+        },
+        {
+          "v": 3.0,
+          "bp": "bp_jet_3",
+          "cost": {
+            "astro": 5,
+            "star_core": 1
+          }
+        }
+      ]
+    }
+  },
+  "loot": {
+    "rarity": [
+      {
+        "id": "common",
+        "name": "Обычный",
+        "color": "#e6e6e6"
+      },
+      {
+        "id": "uncommon",
+        "name": "Необычный",
+        "color": "#5ad15a"
+      },
+      {
+        "id": "rare",
+        "name": "Редкий",
+        "color": "#4f9bff"
+      },
+      {
+        "id": "epic",
+        "name": "Эпический",
+        "color": "#b45bff"
+      },
+      {
+        "id": "legendary",
+        "name": "Легендарный",
+        "color": "#ffcf4a"
+      }
+    ],
+    "tables": {
+      "crate_starter": {
+        "rolls": [
+          1,
+          2
+        ],
+        "slots": 6,
+        "guaranteed": [
+          "bp_backpack_2"
+        ],
+        "entries": [
+          [
+            "iron",
+            2,
+            3,
+            5
+          ],
+          [
+            "ice",
+            1,
+            2,
+            4
+          ]
+        ]
+      },
+      "crate": {
+        "rolls": [
+          2,
+          4
+        ],
+        "slots": 8,
+        "entries": [
+          [
+            "iron",
+            3,
+            8,
+            6
+          ],
+          [
+            "silicon",
+            2,
+            6,
+            5
+          ],
+          [
+            "ice",
+            2,
+            5,
+            4
+          ],
+          [
+            "scrap",
+            2,
+            5,
+            5
+          ],
+          [
+            "titanium",
+            1,
+            3,
+            3
+          ],
+          [
+            "o2_tank",
+            1,
+            2,
+            3
+          ],
+          [
+            "medkit",
+            1,
+            1,
+            2
+          ],
+          [
+            "bp_backpack_2",
+            1,
+            1,
+            0.6
+          ],
+          [
+            "bp_suit_2",
+            1,
+            1,
+            0.6
+          ],
+          [
+            "bp_tool_2",
+            1,
+            1,
+            0.6
+          ],
+          [
+            "seeds",
+            1,
+            2,
+            2
+          ]
+        ]
+      },
+      "body": {
+        "rolls": [
+          2,
+          3
+        ],
+        "slots": 6,
+        "entries": [
+          [
+            "o2_tank",
+            1,
+            3,
+            6
+          ],
+          [
+            "medkit",
+            1,
+            2,
+            4
+          ],
+          [
+            "data_core",
+            1,
+            1,
+            3
+          ],
+          [
+            "scrap",
+            1,
+            3,
+            3
+          ],
+          [
+            "bp_suit_2",
+            1,
+            1,
+            2
+          ],
+          [
+            "bp_tool_2",
+            1,
+            1,
+            1.5
+          ]
+        ]
+      },
+      "station": {
+        "rolls": [
+          3,
+          5
+        ],
+        "slots": 10,
+        "entries": [
+          [
+            "scrap",
+            3,
+            8,
+            6
+          ],
+          [
+            "titanium",
+            2,
+            5,
+            5
+          ],
+          [
+            "data_core",
+            1,
+            2,
+            3
+          ],
+          [
+            "uranium",
+            1,
+            2,
+            3
+          ],
+          [
+            "cobalt",
+            1,
+            3,
+            2
+          ],
+          [
+            "bp_backpack_3",
+            1,
+            1,
+            0.7
+          ],
+          [
+            "bp_suit_3",
+            1,
+            1,
+            0.7
+          ],
+          [
+            "bp_tool_3",
+            1,
+            1,
+            0.7
+          ],
+          [
+            "bp_jet_1",
+            1,
+            1,
+            0.6
+          ],
+          [
+            "bp_backpack_4",
+            1,
+            1,
+            0.12
+          ],
+          [
+            "bp_suit_4",
+            1,
+            1,
+            0.12
+          ],
+          [
+            "bp_tool_4",
+            1,
+            1,
+            0.12
+          ],
+          [
+            "seeds",
+            2,
+            4,
+            5
+          ]
+        ]
+      },
+      "vault": {
+        "rolls": [
+          3,
+          4
+        ],
+        "slots": 10,
+        "guaranteed": [
+          "bp_jet_1"
+        ],
+        "entries": [
+          [
+            "data_core",
+            2,
+            3,
+            3
+          ],
+          [
+            "cobalt",
+            2,
+            4,
+            3
+          ],
+          [
+            "astro",
+            1,
+            2,
+            2
+          ],
+          [
+            "bp_backpack_4",
+            1,
+            1,
+            1
+          ],
+          [
+            "bp_suit_4",
+            1,
+            1,
+            1
+          ],
+          [
+            "bp_tool_4",
+            1,
+            1,
+            1
+          ],
+          [
+            "bp_jet_2",
+            1,
+            1,
+            0.6
+          ]
+        ]
+      },
+      "relic": {
+        "rolls": [
+          2,
+          3
+        ],
+        "slots": 10,
+        "guaranteed": [
+          "star_core",
+          "bp_jet_3"
+        ],
+        "entries": [
+          [
+            "astro",
+            2,
+            4,
+            3
+          ],
+          [
+            "bp_backpack_5",
+            1,
+            1,
+            1
+          ],
+          [
+            "bp_suit_5",
+            1,
+            1,
+            1
+          ]
+        ]
+      },
+      "mesa": {
+        "rolls": [
+          3,
+          4
+        ],
+        "slots": 10,
+        "guaranteed": [
+          "bp_backpack_5"
+        ],
+        "entries": [
+          [
+            "cobalt",
+            3,
+            6,
+            3
+          ],
+          [
+            "astro",
+            2,
+            3,
+            3
+          ],
+          [
+            "star_core",
+            1,
+            1,
+            1
+          ],
+          [
+            "bp_suit_5",
+            1,
+            1,
+            1
+          ]
+        ]
+      }
+    }
+  },
+  "meteors": {
+    "every_sec": [
+      300,
+      480
+    ],
+    "first_sec": 150,
+    "types": [
+      {
+        "id": "iron",
+        "name": "Железный метеорит",
+        "color": "#ff7a3a",
+        "w": 5,
+        "scorch": 7,
+        "shards": [
+          "res_iron",
+          6,
+          "res_titanium",
+          2
+        ],
+        "core": {
+          "rolls": [
+            2,
+            3
+          ],
+          "slots": 6,
+          "entries": [
+            [
+              "iron",
+              4,
+              8,
+              4
+            ],
+            [
+              "titanium",
+              2,
+              4,
+              3
+            ],
+            [
+              "astro",
+              1,
+              1,
+              1
+            ],
+            [
+              "bp_tool_2",
+              1,
+              1,
+              1
+            ],
+            [
+              "bp_backpack_3",
+              1,
+              1,
+              0.4
+            ]
+          ]
+        }
+      },
+      {
+        "id": "cobalt",
+        "name": "Кобальтовый метеорит",
+        "color": "#4f8bff",
+        "w": 3,
+        "scorch": 9,
+        "shards": [
+          "res_cobalt",
+          5,
+          "res_iron",
+          2
+        ],
+        "core": {
+          "rolls": [
+            2,
+            3
+          ],
+          "slots": 6,
+          "entries": [
+            [
+              "cobalt",
+              3,
+              5,
+              4
+            ],
+            [
+              "astro",
+              1,
+              2,
+              2
+            ],
+            [
+              "bp_suit_3",
+              1,
+              1,
+              1
+            ],
+            [
+              "bp_tool_3",
+              1,
+              1,
+              1
+            ],
+            [
+              "bp_backpack_4",
+              1,
+              1,
+              0.4
+            ]
+          ]
+        }
+      },
+      {
+        "id": "crystal",
+        "name": "Кристаллический метеорит",
+        "color": "#c06bff",
+        "w": 2,
+        "scorch": 11,
+        "shards": [
+          "res_crystal",
+          5
+        ],
+        "core": {
+          "rolls": [
+            2,
+            4
+          ],
+          "slots": 8,
+          "guaranteed": [
+            "astro"
+          ],
+          "entries": [
+            [
+              "astro",
+              2,
+              3,
+              4
+            ],
+            [
+              "cobalt",
+              2,
+              4,
+              2
+            ],
+            [
+              "bp_jet_2",
+              1,
+              1,
+              0.8
+            ],
+            [
+              "bp_suit_4",
+              1,
+              1,
+              0.8
+            ],
+            [
+              "bp_tool_4",
+              1,
+              1,
+              0.8
+            ]
+          ]
+        }
+      },
+      {
+        "id": "star",
+        "name": "Звёздный метеорит",
+        "color": "#ffd24a",
+        "w": 0.7,
+        "scorch": 16,
+        "shards": [
+          "res_crystal",
+          6,
+          "res_cobalt",
+          4
+        ],
+        "core": {
+          "rolls": [
+            3,
+            4
+          ],
+          "slots": 8,
+          "guaranteed": [
+            "star_core"
+          ],
+          "entries": [
+            [
+              "astro",
+              3,
+              5,
+              3
+            ],
+            [
+              "bp_backpack_5",
+              1,
+              1,
+              1
+            ],
+            [
+              "bp_suit_5",
+              1,
+              1,
+              1
+            ],
+            [
+              "bp_jet_3",
+              1,
+              1,
+              0.6
+            ]
+          ]
+        }
+      }
+    ],
+    "dist": [
+      70,
+      130
+    ]
+  },
+  "events": {
+    "day_sec": 540,
+    "night_sec": 75,
+    "dusk_sec": 25,
+    "storm": {
+      "every_sec": [
+        300,
+        520
+      ],
+      "warn_sec": 15,
+      "dur_sec": [
+        40,
+        70
+      ],
+      "fog_mul": 7,
+      "o2_mul": 1.6,
+      "color": "#b9773f",
+      "min_stage": 0,
+      "max_ti": 600
+    }
+  },
+  "build_pieces": [
+    {
+      "id": "m_room",
+      "name": "Жилой модуль 4×4",
+      "cost": {
+        "iron": 6,
+        "silicon": 2
+      },
+      "kind": "module"
+    },
+    {
+      "id": "m_glass",
+      "name": "Стеклянный модуль 4×4",
+      "cost": {
+        "silicon": 6,
+        "iron": 2
+      },
+      "kind": "module"
+    },
+    {
+      "id": "b_floor",
+      "name": "Пол 2×2",
+      "cost": {
+        "iron": 2
+      },
+      "kind": "floor"
+    },
+    {
+      "id": "b_wall",
+      "name": "Стена",
+      "cost": {
+        "iron": 2,
+        "silicon": 1
+      },
+      "kind": "wall"
+    },
+    {
+      "id": "b_window",
+      "name": "Стена с окном",
+      "cost": {
+        "iron": 2,
+        "silicon": 2
+      },
+      "kind": "wall"
+    },
+    {
+      "id": "b_door",
+      "name": "Дверной проём",
+      "cost": {
+        "iron": 2
+      },
+      "kind": "wall",
+      "pass": true
+    },
+    {
+      "id": "b_glass",
+      "name": "Стеклянная стена",
+      "cost": {
+        "silicon": 3
+      },
+      "kind": "wall"
+    },
+    {
+      "id": "b_roof",
+      "name": "Крыша 2×2",
+      "cost": {
+        "iron": 2,
+        "silicon": 1
+      },
+      "kind": "floor",
+      "roof": true
+    },
+    {
+      "id": "b_pillar",
+      "name": "Колонна",
+      "cost": {
+        "iron": 1
+      },
+      "kind": "post"
+    },
+    {
+      "id": "b_planter",
+      "name": "Клумба",
+      "cost": {
+        "iron": 1,
+        "seeds": 1
+      },
+      "kind": "deco"
+    },
+    {
+      "id": "b_beacon",
+      "name": "Маяк базы",
+      "cost": {
+        "iron": 3,
+        "silicon": 1
+      },
+      "kind": "deco",
+      "legendary": false
+    },
+    {
+      "id": "b_chest",
+      "name": "Сундук",
+      "kind": "deco",
+      "recipe": "chest",
+      "cost": {
+        "iron": 3,
+        "silicon": 1
+      }
+    },
+    {
+      "id": "b_workbench",
+      "name": "Фабрикатор",
+      "kind": "deco",
+      "recipe": "workbench",
+      "cost": {
+        "iron": 8,
+        "silicon": 4
+      }
+    }
+  ],
+  "onboarding": [
+    {
+      "id": "wreck",
+      "text": "Обыщи обломки купола",
+      "hint": "4 кучи обломков вокруг шаттла — подойди и нажми E. Нужно 6 секций",
+      "event": "wreck",
+      "n": 4,
+      "reward": {},
+      "xp": 10
+    },
+    {
+      "id": "dome_craft",
+      "text": "Собери купол",
+      "hint": "Крафт (C) → «Купол базы»",
+      "event": "dome_craft",
+      "reward": {},
+      "xp": 10,
+      "pulse": "craft"
+    },
+    {
+      "id": "dome_place",
+      "text": "Поставь купол",
+      "hint": "выбери ровное место и нажми E — R поворачивает шлюз",
+      "event": "dome_place",
+      "reward": {},
+      "xp": 15
+    },
+    {
+      "id": "dome_enter",
+      "text": "Зайди в купол",
+      "hint": "шлюз откроется сам — внутри O₂, фабрикатор и сундук",
+      "event": "dome_enter",
+      "reward": {},
+      "xp": 15
+    },
+    {
+      "id": "crate",
+      "text": "Открой сброшенный контейнер",
+      "hint": "рядом с базой",
+      "event": "loot",
+      "reward": {},
+      "xp": 10,
+      "done_if": {
+        "looted": "poi:starter_crate"
+      }
+    },
+    {
+      "id": "gear_open",
+      "text": "Открой снаряжение",
+      "hint": "кнопка «Снаряж.» (I) — посмотри, чего не хватает для ранца",
+      "event": "gear_open",
+      "pulse": "inv",
+      "reward": {},
+      "xp": 5
+    },
+    {
+      "id": "bag_res",
+      "text": "Собери ресурсы для ранца",
+      "hint": "железо и кремний рядом с базой — стрелка покажет",
+      "event": "bag_res",
+      "pulse": null,
+      "reward": {},
+      "xp": 10,
+      "done_if": {
+        "have": {
+          "iron": 6,
+          "silicon": 3
+        }
+      }
+    },
+    {
+      "id": "learn",
+      "text": "Улучши ранец",
+      "hint": "у фабрикатора: Снаряжение (I) → «Улучшить»",
+      "event": "gear",
+      "pulse": "inv",
+      "reward": {},
+      "xp": 10,
+      "done_if": {
+        "gear": {
+          "backpack": 1
+        }
+      }
+    },
+    {
+      "id": "mine",
+      "text": "Добудь 8 ресурсов",
+      "hint": "железо и кремний — на равнинах, лёд — в низинах",
+      "event": "mine",
+      "n": 8,
+      "reward": {},
+      "xp": 10
+    },
+    {
+      "id": "heater",
+      "text": "Построй нагреватель",
+      "hint": "Крафт (C) → Базовые машины",
+      "event": "build",
+      "reward": {},
+      "xp": 15,
+      "done_if": {
+        "built": "heater"
+      },
+      "pulse": "craft"
+    },
+    {
+      "id": "drill",
+      "text": "Построй бур",
+      "hint": "нужен лёд",
+      "event": "build",
+      "reward": {},
+      "xp": 15,
+      "done_if": {
+        "built": "drill"
+      },
+      "pulse": "craft"
+    },
+    {
+      "id": "module",
+      "text": "Пристрой модуль",
+      "hint": "Стройка (B) → Модули — ставь вплотную к стене, R меняет сторону двери",
+      "event": "house",
+      "reward": {},
+      "xp": 15,
+      "done_if": {
+        "modules": 1
+      },
+      "pulse": "house"
+    },
+    {
+      "id": "stage",
+      "text": "Дождись «Голубеющего неба»",
+      "hint": "машины уже меняют планету — смотри на небо",
+      "event": "stage",
+      "reward": {},
+      "xp": 30
+    },
+    {
+      "id": "meteor",
+      "text": "Найди упавший метеорит",
+      "hint": "увидел хвост в небе — беги туда и осмотри ядро (E)",
+      "event": "meteor_touch",
+      "reward": {},
+      "xp": 20
+    },
+    {
+      "id": "find_crew",
+      "text": "Найди пропавшего члена экипажа",
+      "hint": "тело в скафандре где-то в пустыне — осмотри его (E)",
+      "event": "loot_body",
+      "reward": {},
+      "xp": 30
+    },
+    {
+      "id": "visit_wreck",
+      "text": "Исследуй разбитый корабль",
+      "hint": "обломки к северо-западу — внутри темно, возьми фонарь",
+      "event": "visit_poi",
+      "poi": "wreck",
+      "reward": {},
+      "xp": 30
+    },
+    {
+      "id": "scout_cave",
+      "text": "Разведай замёрзшую пещеру",
+      "hint": "ледяная пещера на юге — подойди ко входу",
+      "event": "visit_poi",
+      "poi": "ice_cave",
+      "reward": {},
+      "xp": 40
+    }
+  ]
+}
