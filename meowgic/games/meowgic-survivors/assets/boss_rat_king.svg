@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ff3b5c" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#ff3b5c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- хвост -->
+  <path d="M96 150 C100 176 128 182 146 166" fill="none" stroke="#12081f" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M96 150 C100 176 128 182 146 166" fill="none" stroke="#2a1740" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- плащ -->
+  <ellipse cx="96" cy="96" rx="82" ry="76" fill="#4a1330" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="93" cy="93" rx="72" ry="66" fill="#7a1f3d"/>
+  <ellipse cx="38" cy="96" rx="8" ry="26" fill="#9a2c52" opacity="0.85"/>
+
+  <!-- уши -->
+  <ellipse cx="55" cy="46" rx="19" ry="18" fill="#2a1740" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="137" cy="46" rx="19" ry="18" fill="#2a1740" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="56" cy="48" rx="9" ry="8" fill="#7a1f3d"/>
+  <ellipse cx="136" cy="48" rx="9" ry="8" fill="#7a1f3d"/>
+
+  <!-- когти -->
+  <g fill="#fff8ee" stroke="#12081f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M37 148 L41 164 L45 148 Z"/>
+    <path d="M48 150 L52 166 L56 150 Z"/>
+    <path d="M59 148 L63 164 L67 148 Z"/>
+    <path d="M125 148 L129 164 L133 148 Z"/>
+    <path d="M136 150 L140 166 L144 150 Z"/>
+    <path d="M147 148 L151 164 L155 148 Z"/>
+  </g>
+
+  <!-- лапы -->
+  <ellipse cx="52" cy="136" rx="18" ry="16" fill="#2a1740" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="140" cy="136" rx="18" ry="16" fill="#2a1740" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="46" cy="130" rx="6" ry="4" fill="#3a2466"/>
+
+  <!-- тело -->
+  <ellipse cx="96" cy="128" rx="52" ry="38" fill="#2a1740" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="74" cy="118" rx="18" ry="10" fill="#3a2466" transform="rotate(-20 74 118)"/>
+
+  <!-- голова -->
+  <ellipse cx="96" cy="74" rx="46" ry="40" fill="#2a1740" stroke="#12081f" stroke-width="8" stroke-linejoin="round"/>
+  <ellipse cx="76" cy="58" rx="20" ry="11" fill="#3a2466" transform="rotate(-20 76 58)"/>
+
+  <!-- свечение глаз -->
+  <circle cx="76" cy="78" r="25" fill="url(#eyeGlow)"/>
+  <circle cx="116" cy="78" r="25" fill="url(#eyeGlow)"/>
+
+  <!-- глаза -->
+  <ellipse cx="77" cy="78" rx="11" ry="12" fill="#ff3b5c" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="115" cy="78" rx="11" ry="12" fill="#ff3b5c" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="78" cy="80" rx="3.5" ry="7" fill="#12081f"/>
+  <ellipse cx="114" cy="80" rx="3.5" ry="7" fill="#12081f"/>
+
+  <!-- зубы -->
+  <g fill="#fff8ee" stroke="#12081f" stroke-width="3.5" stroke-linejoin="round">
+    <rect x="88" y="102" width="8" height="13" rx="2"/>
+    <rect x="96" y="102" width="8" height="13" rx="2"/>
+  </g>
+
+  <!-- морда и нос -->
+  <ellipse cx="96" cy="98" rx="17" ry="12" fill="#3a2466" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="96" cy="92" rx="6" ry="4.5" fill="#ff3b5c" stroke="#12081f" stroke-width="3"/>
+
+  <!-- корона -->
+  <path d="M69 48 L71 20 L84 33 L96 13 L108 33 L121 20 L123 48 Z" fill="#ffc933" stroke="#12081f" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M74 40 H118 L119 44 H73 Z" fill="#d9a000"/>
+  <path d="M76 26 L77 35" stroke="#fff8ee" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <circle cx="96" cy="32" r="6" fill="#c92a3a" stroke="#12081f" stroke-width="3.5"/>
+  <circle cx="94" cy="30" r="1.8" fill="#fff8ee" opacity="0.8"/>
+</svg>

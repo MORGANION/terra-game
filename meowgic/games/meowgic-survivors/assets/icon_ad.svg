@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <defs>
+    <radialGradient id="halo" cx="48" cy="40" r="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0.6" stop-color="#4cc9f0" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4cc9f0" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="ballClip">
+      <circle cx="48" cy="40" r="32"/>
+    </clipPath>
+  </defs>
+
+  <!-- мягкий ореол без обводки -->
+  <circle cx="48" cy="40" r="46" fill="url(#halo)"/>
+
+  <!-- хрустальный шар: тень, база, блик -->
+  <g clip-path="url(#ballClip)">
+    <rect x="16" y="8" width="64" height="64" fill="#2a9fd0"/>
+    <circle cx="43" cy="35" r="30" fill="#4cc9f0"/>
+  </g>
+  <ellipse cx="30" cy="23" rx="8" ry="4.5" transform="rotate(-38 30 23)" fill="#b8eefb"/>
+  <circle cx="48" cy="40" r="32" fill="none" stroke="#12081f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- золотая подставка -->
+  <path d="M22 68 Q48 74 74 68 L80 82 Q82 88 76 88 L20 88 Q14 88 16 82 Z" fill="#ffc933"/>
+  <path d="M17 83 L79 83 Q80 85 78.5 86.500 Q78 88 76 88 L20 88 Q16 88 17 83 Z" fill="#d9a000"/>
+  <ellipse cx="29" cy="74" rx="5" ry="2" transform="rotate(14 29 74)" fill="#ffe28a"/>
+  <!-- красная рекламная метка -->
+  <rect x="34" y="77" width="28" height="7" rx="3.500" fill="#c92a3a" stroke="#12081f" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M22 68 Q48 74 74 68 L80 82 Q82 88 76 88 L20 88 Q14 88 16 82 Z" fill="none" stroke="#12081f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- Play -->
+  <path d="M41 28 L41 52 L63 40 Z" fill="#fff8ee" stroke="#12081f" stroke-width="3.500" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

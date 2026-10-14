@@ -1,0 +1,228 @@
+{
+  "currencies": {
+    "coins": {
+      "name": "Монеты",
+      "start": 0,
+      "icon": "coin"
+    },
+    "gems": {
+      "name": "Кристаллы",
+      "start": 0,
+      "icon": "gem"
+    }
+  },
+  "stats": {
+    "max_hp": {
+      "base": 100,
+      "label": "Здоровье"
+    },
+    "damage": {
+      "base": 10,
+      "label": "Урон"
+    },
+    "move_speed": {
+      "base": 260,
+      "label": "Скорость"
+    },
+    "magnet_radius": {
+      "base": 90,
+      "label": "Магнит"
+    },
+    "crit_chance": {
+      "base": 0.05,
+      "label": "Удача"
+    }
+  },
+  "upgrades": [
+    {
+      "id": "max_hp",
+      "name": "Кошачьи жизни",
+      "stat": "max_hp",
+      "per_level": 15,
+      "base_cost": 35,
+      "cost_growth": 1.5,
+      "max_level": 10,
+      "currency": "coins",
+      "icon": "icon_hp"
+    },
+    {
+      "id": "damage",
+      "name": "Сила когтей-посохов",
+      "stat": "damage",
+      "per_level": 2,
+      "base_cost": 45,
+      "cost_growth": 1.55,
+      "max_level": 10,
+      "currency": "coins",
+      "icon": "icon_damage"
+    },
+    {
+      "id": "move_speed",
+      "name": "Мягкие лапки",
+      "stat": "move_speed",
+      "per_level": 15,
+      "base_cost": 40,
+      "cost_growth": 1.5,
+      "max_level": 8,
+      "currency": "coins",
+      "icon": "icon_speed"
+    },
+    {
+      "id": "magnet_radius",
+      "name": "Мурчащий магнит",
+      "stat": "magnet_radius",
+      "per_level": 15,
+      "base_cost": 30,
+      "cost_growth": 1.5,
+      "max_level": 8,
+      "currency": "coins",
+      "icon": "icon_magnet"
+    },
+    {
+      "id": "crit_chance",
+      "name": "Чёрная удача",
+      "stat": "crit_chance",
+      "per_level": 0.03,
+      "base_cost": 55,
+      "cost_growth": 1.55,
+      "max_level": 10,
+      "currency": "coins",
+      "icon": "icon_luck"
+    }
+  ],
+  "run_reward": {
+    "coins_per_score": 0.002,
+    "coins_min": 12,
+    "win_bonus": 35
+  },
+  "rewarded": {
+    "double_reward": {
+      "mult": 2
+    },
+    "revive": {},
+    "free_coins": {
+      "grant": {
+        "coins": 12
+      },
+      "cooldown_sec": 180
+    }
+  },
+  "interstitial_every_runs": 3,
+  "iap": [
+    {
+      "id": "gem_pouch",
+      "title": "Горсть кристаллов",
+      "desc": "30 кристаллов для покупок в магазине.",
+      "price": "29 ₽",
+      "grant": {
+        "gems": 30,
+        "coins": 0,
+        "flags": []
+      },
+      "icon": "gem",
+      "once": false,
+      "best": false
+    },
+    {
+      "id": "gem_chest",
+      "title": "Сундук кристаллов",
+      "desc": "120 кристаллов.",
+      "price": "99 ₽",
+      "grant": {
+        "gems": 120,
+        "coins": 0,
+        "flags": []
+      },
+      "icon": "chest_gold",
+      "once": false,
+      "best": false
+    },
+    {
+      "id": "gem_treasury",
+      "title": "Кристальная сокровищница",
+      "desc": "340 кристаллов по выгодной цене.",
+      "price": "249 ₽",
+      "grant": {
+        "gems": 340,
+        "coins": 0,
+        "flags": []
+      },
+      "icon": "gem",
+      "once": false,
+      "best": true
+    },
+    {
+      "id": "starter_pack",
+      "title": "Набор юного архимага",
+      "desc": "90 кристаллов и 160 монет для быстрого старта.",
+      "price": "79 ₽",
+      "grant": {
+        "gems": 90,
+        "coins": 160,
+        "flags": []
+      },
+      "icon": "cat_mage",
+      "once": true,
+      "best": false
+    },
+    {
+      "id": "no_ads",
+      "title": "Без межстраничной рекламы",
+      "desc": "Убирает обязательную рекламу между забегами. Добровольная реклама за награды остаётся доступной.",
+      "price": "299 ₽",
+      "grant": {
+        "gems": 100,
+        "coins": 0,
+        "flags": [
+          "no_ads"
+        ]
+      },
+      "icon": "icon_ad",
+      "once": true,
+      "best": false
+    }
+  ],
+  "gem_shop": [
+    {
+      "id": "coin_handful",
+      "title": "Пригоршня монет",
+      "desc": "Монеты на первые улучшения.",
+      "cost": {
+        "gems": 25
+      },
+      "grant": {
+        "coins": 140
+      },
+      "icon": "coin"
+    },
+    {
+      "id": "coin_chest",
+      "title": "Сундук монет",
+      "desc": "Запас монет для нескольких улучшений.",
+      "cost": {
+        "gems": 65
+      },
+      "grant": {
+        "coins": 420
+      },
+      "icon": "chest_gold"
+    },
+    {
+      "id": "coin_treasury",
+      "title": "Монетная сокровищница",
+      "desc": "Монеты для дорогих поздних уровней.",
+      "cost": {
+        "gems": 140
+      },
+      "grant": {
+        "coins": 1050
+      },
+      "icon": "chest_gold"
+    }
+  ],
+  "daily": {
+    "coins": 35,
+    "gems": 2
+  },
+  "reasoning": "Подобранные монеты остаются основным доходом; очки дают небольшую добавку, победа — ощутимый бонус.\nПервое улучшение доступно примерно после одного забега, пятое суммарное — примерно после 3–5; первые три уровня одной характеристики обычно берутся за 1–2 забега каждый.\nДальнейшее удорожание заставляет выбирать между характеристиками, а добровольное ×2 заметно сокращает ожидание.\nЕжедневка даёт немного кристаллов; покупки ускоряют накопление монет, но не открывают эксклюзивную силу."
+}

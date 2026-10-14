@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <!-- Линии движения (слева) -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 42 H28 M8 62 H30 M16 80 H29" stroke="#12081f" stroke-width="11"/>
+    <path d="M14 42 H28 M8 62 H30 M16 80 H29" stroke="#4cc9f0" stroke-width="5"/>
+  </g>
+
+  <!-- Пальцы -->
+  <g fill="#ff9f1c" stroke="#12081f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="41" cy="44" r="8.5"/>
+    <circle cx="53" cy="28" r="9"/>
+    <circle cx="71" cy="28" r="9"/>
+    <circle cx="83" cy="44" r="8.5"/>
+  </g>
+
+  <!-- Ладонь -->
+  <ellipse cx="62" cy="62" rx="25" ry="22" fill="#ff9f1c"/>
+  <!-- Тень (снизу-справа) -->
+  <path d="M86 68 A25 22 0 0 1 56 83.5 C70 80 80 76 86 68Z" fill="#d9480f" opacity="0.6"/>
+  <ellipse cx="62" cy="62" rx="25" ry="22" fill="none" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Подушечка -->
+  <path d="M62 58 C68 58 72 64 74 68 C76 73 72 76 67 75 C64 74 60 74 57 75 C52 76 48 73 50 68 C52 64 56 58 62 58Z" fill="#ffe0b0"/>
+
+  <!-- Блики (сверху-слева) -->
+  <ellipse cx="47" cy="52" rx="6" ry="3" transform="rotate(-30 47 52)" fill="#ffe0b0" opacity="0.6"/>
+  <ellipse cx="49" cy="24" rx="3.5" ry="2" transform="rotate(-30 49 24)" fill="#ffe0b0" opacity="0.6"/>
+</svg>

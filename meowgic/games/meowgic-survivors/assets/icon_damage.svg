@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffc933" stop-opacity="0.65"/>
+      <stop offset="0.55" stop-color="#ff9f1c" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#ff9f1c" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="38%" cy="32%" r="75%">
+      <stop offset="0" stop-color="#ffc933"/>
+      <stop offset="1" stop-color="#ff9f1c"/>
+    </radialGradient>
+  </defs>
+
+  <g transform="translate(2,2)" stroke-linejoin="round" stroke-linecap="round">
+    <!-- мягкое свечение без обводки -->
+    <circle cx="62" cy="34" r="29" fill="url(#halo)"/>
+
+    <!-- древко: обводка, заливка, блик, тень -->
+    <line x1="16" y1="82" x2="52" y2="44" stroke="#12081f" stroke-width="14"/>
+    <line x1="16" y1="82" x2="52" y2="44" stroke="#8a4b2a" stroke-width="6"/>
+    <line x1="15.2" y1="81.2" x2="51.2" y2="43.2" stroke="#ffc933" stroke-opacity="0.35" stroke-width="2"/>
+    <line x1="17.6" y1="83.6" x2="50" y2="49" stroke="#12081f" stroke-opacity="0.3" stroke-width="2"/>
+
+    <!-- языки пламени за шаром -->
+    <path d="M47,32 C43,24 47,18 50,12 C51,17 54,19 57,20 C57,14 60,9 64,5 C66,11 65,15 68,18 C71,16 73,13 76,10 C80,17 80,26 77,32 Z"
+          fill="#d9480f" stroke="#12081f" stroke-width="4"/>
+    <path d="M59.5,20 C59.5,16 62,12.5 64,10.5 C65,14 66.5,17 67,20 Z" fill="#ff9f1c"/>
+
+    <!-- золотое кольцо под шаром -->
+    <g transform="translate(50,46) rotate(-45)">
+      <rect x="-4" y="-9" width="8" height="18" rx="3.5" fill="#ffc933" stroke="#12081f" stroke-width="4"/>
+      <rect x="-2" y="-6" width="1.8" height="5" rx="0.9" fill="#fff8ee" fill-opacity="0.7" stroke="none"/>
+    </g>
+
+    <!-- огненный шар -->
+    <circle cx="62" cy="34" r="15" fill="url(#orb)" stroke="#12081f" stroke-width="4"/>
+    <path d="M74.8,36.3 A13,13 0 0 1 59.7,46.8 A10,10 0 0 0 74.8,36.3 Z" fill="#d9480f" fill-opacity="0.55"/>
+    <ellipse cx="56" cy="28" rx="4" ry="2.5" transform="rotate(-35 56 28)" fill="#fff8ee" fill-opacity="0.75"/>
+  </g>
+</svg>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" width="720" height="1280">
+  <defs>
+    <radialGradient id="vig" gradientUnits="userSpaceOnUse" cx="360" cy="640" r="740">
+      <stop offset="0.5" stop-color="#12081f" stop-opacity="0"/>
+      <stop offset="1" stop-color="#12081f" stop-opacity="0.85"/>
+    </radialGradient>
+    <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="360" cy="640" r="220">
+      <stop offset="0" stop-color="#4cc9f0" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#4cc9f0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- base -->
+  <rect width="720" height="1280" fill="#1b1030"/>
+
+  <!-- tile tone variation -->
+  <g fill="#2a1a4a" opacity="0.55">
+    <rect x="120" y="0" width="120" height="120"/>
+    <rect x="480" y="0" width="120" height="120"/>
+    <rect x="60" y="120" width="120" height="120"/>
+    <rect x="540" y="120" width="120" height="120"/>
+    <rect x="0" y="240" width="120" height="120"/>
+    <rect x="360" y="240" width="120" height="120"/>
+    <rect x="180" y="360" width="120" height="120"/>
+    <rect x="540" y="360" width="120" height="120"/>
+    <rect x="240" y="480" width="120" height="120"/>
+    <rect x="600" y="480" width="120" height="120"/>
+    <rect x="420" y="600" width="120" height="120"/>
+    <rect x="120" y="720" width="120" height="120"/>
+    <rect x="480" y="720" width="120" height="120"/>
+    <rect x="60" y="840" width="120" height="120"/>
+    <rect x="300" y="840" width="120" height="120"/>
+    <rect x="0" y="960" width="120" height="120"/>
+    <rect x="360" y="960" width="120" height="120"/>
+    <rect x="180" y="1080" width="120" height="120"/>
+    <rect x="540" y="1080" width="120" height="120"/>
+    <rect x="240" y="1200" width="120" height="80"/>
+  </g>
+
+  <!-- tile seams -->
+  <path fill="none" stroke="#12081f" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+    d="M0 120H720M0 240H720M0 360H720M0 480H720M0 600H720M0 720H720M0 840H720M0 960H720M0 1080H720M0 1200H720
+       M120 0V120M240 0V120M360 0V120M480 0V120M600 0V120
+       M60 120V240M180 120V240M300 120V240M420 120V240M540 120V240M660 120V240
+       M120 240V360M240 240V360M360 240V360M480 240V360M600 240V360
+       M60 360V480M180 360V480M300 360V480M420 360V480M540 360V480M660 360V480
+       M120 480V600M240 480V600M360 480V600M480 480V600M600 480V600
+       M60 600V720M180 600V720M300 600V720M420 600V720M540 600V720M660 600V720
+       M120 720V840M240 720V840M360 720V840M480 720V840M600 720V840
+       M60 840V960M180 840V960M300 840V960M420 840V960M540 840V960M660 840V960
+       M120 960V1080M240 960V1080M360 960V1080M480 960V1080M600 960V1080
+       M60 1080V1200M180 1080V1200M300 1080V1200M420 1080V1200M540 1080V1200M660 1080V1200
+       M120 1200V1280M240 1200V1280M360 1200V1280M480 1200V1280M600 1200V1280"/>
+
+  <!-- soft glow under runes -->
+  <circle cx="360" cy="640" r="220" fill="url(#glow)"/>
+
+  <!-- rune circle, very faint -->
+  <g fill="none" stroke="#4cc9f0" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="360" cy="640" r="180" stroke-opacity="0.18" stroke-width="3"/>
+    <circle cx="360" cy="640" r="165" stroke-opacity="0.15" stroke-width="8" stroke-dasharray="15.9 24"/>
+    <path stroke-opacity="0.16" stroke-width="3"
+      d="M360 520L463.9 700H256.1ZM360 760L256.1 580H463.9Z"/>
+    <circle cx="360" cy="640" r="40" stroke-opacity="0.18" stroke-width="3"/>
+  </g>
+
+  <!-- vignette -->
+  <rect width="720" height="1280" fill="url(#vig)"/>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <radialGradient id="ball" cx="0.42" cy="0.4" r="0.65">
+      <stop offset="0" stop-color="#ffc933"/>
+      <stop offset="0.5" stop-color="#ff9f1c"/>
+      <stop offset="1" stop-color="#d9480f"/>
+    </radialGradient>
+    <linearGradient id="tail" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#ff9f1c"/>
+      <stop offset="1" stop-color="#d9480f"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ff9f1c" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ff9f1c" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- soft glow, no outline -->
+  <circle cx="30" cy="24" r="17" fill="url(#halo)"/>
+
+  <!-- flame tail: 3 tongues -->
+  <path d="M28 13 C22 11 14 11 8 9 C10 13 11 16 14 19 C10 20 7 22 3 24 C7 26 10 28 14 29 C12 33 10 36 8 40 C14 40 22 38 28 35 Z"
+        fill="url(#tail)" stroke="#12081f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- inner tail glow -->
+  <path d="M28 20 C22 21 15 22 10 24 C15 26 22 27 28 28 Z" fill="#ffc933"/>
+
+  <!-- fireball body -->
+  <circle cx="31" cy="24" r="12" fill="url(#ball)" stroke="#12081f" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- highlight -->
+  <ellipse cx="29" cy="21" rx="4.2" ry="3" transform="rotate(-25 29 21)" fill="#fff8ee"/>
+</svg>

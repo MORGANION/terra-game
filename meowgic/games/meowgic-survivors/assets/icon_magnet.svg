@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#4cc9f0" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#4cc9f0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- мягкий ореол притяжения (без обводки) -->
+  <circle cx="48" cy="22" r="26" fill="url(#halo)"/>
+
+  <!-- дуги притяжения -->
+  <g fill="none" stroke="#4cc9f0" stroke-width="3" stroke-linecap="round">
+    <path d="M11 36 Q5 26 11 17"/>
+    <path d="M85 36 Q91 26 85 17"/>
+  </g>
+
+  <!-- тело магнита: контур + красная заливка -->
+  <path d="M26 48 V58 A22 22 0 0 0 70 58 V48" fill="none" stroke="#12081f" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M26 48 V58 A22 22 0 0 0 70 58 V48" fill="none" stroke="#c92a3a" stroke-width="16" stroke-linejoin="round"/>
+
+  <!-- блик и тень на теле -->
+  <path d="M22 50 V58 A26 26 0 0 0 29.6 76.4" fill="none" stroke="#ff7a85" stroke-width="3" stroke-linecap="round"/>
+  <path d="M74 52 V58 A26 26 0 0 1 66.4 76.4" fill="none" stroke="#8f1d29" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- наконечники -->
+  <rect x="18" y="26" width="16" height="22" rx="3" fill="#cfe8ff" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="62" y="26" width="16" height="22" rx="3" fill="#cfe8ff" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="22" y="30" width="3" height="9" rx="1.5" fill="#fff8ee"/>
+  <rect x="66" y="30" width="3" height="9" rx="1.5" fill="#fff8ee"/>
+  <rect x="29" y="33" width="3" height="11" rx="1.5" fill="#9cc3e6"/>
+  <rect x="73" y="33" width="3" height="11" rx="1.5" fill="#9cc3e6"/>
+
+  <!-- монетки -->
+  <g stroke="#12081f" stroke-width="4" stroke-linejoin="round">
+    <circle cx="24" cy="13" r="7" fill="#ffc933"/>
+    <circle cx="72" cy="13" r="7" fill="#ffc933"/>
+    <circle cx="48" cy="21" r="8" fill="#ffc933"/>
+  </g>
+  <g fill="#fff8ee" opacity="0.85">
+    <ellipse cx="22" cy="11" rx="2" ry="1.4"/>
+    <ellipse cx="70" cy="11" rx="2" ry="1.4"/>
+    <ellipse cx="45.5" cy="18.5" rx="2.4" ry="1.7"/>
+  </g>
+</svg>

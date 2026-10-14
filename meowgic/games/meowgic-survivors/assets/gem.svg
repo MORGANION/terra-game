@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="halo" cx="32" cy="32" r="31" gradientUnits="userSpaceOnUse">
+      <stop offset="0.55" stop-color="#4cc9f0" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4cc9f0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- мягкий голубой ореол без обводки -->
+  <circle cx="32" cy="32" r="31" fill="url(#halo)"/>
+  <path d="M32 6 L53 30 L32 58 L11 30 Z" fill="none" stroke="#4cc9f0" stroke-opacity="0.45" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- грани -->
+  <path d="M32 6 L11 30 L32 30 Z" fill="#b565f0" stroke="#b565f0" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M32 6 L53 30 L32 30 Z" fill="#7b3fc4" stroke="#7b3fc4" stroke-width="1" stroke-linejoin="round"/>
+  <path d="M11 30 L53 30 L32 58 Z" fill="#4a2290" stroke="#4a2290" stroke-width="1" stroke-linejoin="round"/>
+
+  <!-- внутренние рёбра -->
+  <path d="M11 30 L53 30 M32 6 L32 30" fill="none" stroke="#12081f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.9"/>
+
+  <!-- внешняя обводка -->
+  <path d="M32 6 L53 30 L32 58 L11 30 Z" fill="none" stroke="#12081f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- блик -->
+  <path d="M22.5 25 L26.5 16.5" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- звёздочка -->
+  <path d="M41 11 Q42 15.5 46 16.5 Q42 17.5 41 22 Q40 17.5 36 16.5 Q40 15.5 41 11 Z" fill="#ffffff"/>
+</svg>

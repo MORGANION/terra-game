@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <defs>
+    <linearGradient id="bagGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d89a48"/>
+      <stop offset="1" stop-color="#c98a3a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ореол кристалла (мягкий, без обводки) -->
+  <circle cx="47" cy="73" r="19" fill="#b565f0" opacity="0.18"/>
+
+  <!-- монеты сверху -->
+  <ellipse cx="48" cy="20" rx="12" ry="11" fill="#ffc933" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="31" cy="32" rx="12" ry="11" fill="#ffc933" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="65" cy="32" rx="12" ry="11" fill="#ffc933" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="31" cy="32" r="5" fill="none" stroke="#12081f" stroke-opacity="0.3" stroke-width="3"/>
+  <circle cx="65" cy="32" r="5" fill="none" stroke="#12081f" stroke-opacity="0.3" stroke-width="3"/>
+
+  <!-- мешочек: заливка -->
+  <path id="bag" d="M34 42 L62 42 C64 48 66 50 72 54 C84 62 88 70 86 78 C84 88 72 90 48 90 C24 90 12 88 10 78 C8 70 12 62 24 54 C30 50 32 48 34 42 Z" fill="url(#bagGrad)"/>
+  <!-- тень снизу-справа -->
+  <path d="M86 78 C84 88 72 90 48 90 C36 90 27 89.5 20 88 C44 86 70 82 79 64 C84 68 87 73 86 78 Z" fill="#12081f" opacity="0.25"/>
+  <!-- блик сверху-слева -->
+  <path d="M18 72 C18 66 22 61 28 57" fill="none" stroke="#ffc933" stroke-opacity="0.55" stroke-width="5" stroke-linecap="round"/>
+  <!-- мешочек: обводка -->
+  <path d="M34 42 L62 42 C64 48 66 50 72 54 C84 62 88 70 86 78 C84 88 72 90 48 90 C24 90 12 88 10 78 C8 70 12 62 24 54 C30 50 32 48 34 42 Z" fill="none" stroke="#12081f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+
+  <!-- шнурок -->
+  <rect x="29" y="42" width="38" height="9" rx="4.5" fill="#ffc933" stroke="#12081f" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- кристалл спереди -->
+  <path d="M47 58 L58 66 Q62 70 58 76 L47 88 L36 76 Q32 70 36 66 Z" fill="#b565f0"/>
+  <path d="M47 58 L58 66 Q62 70 58 76 L47 88 Z" fill="#12081f" opacity="0.25"/>
+  <path d="M47 58 L58 66 Q62 70 58 76 L47 88 L36 76 Q32 70 36 66 Z" fill="none" stroke="#12081f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <radialGradient id="glow" cx="64" cy="48" r="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffc933" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#ffc933" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- сияние (без обводки) -->
+  <circle cx="64" cy="48" r="48" fill="url(#glow)"/>
+
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- откинутая крышка (внутренняя сторона) -->
+    <path d="M24 72 V44 Q24 34 34 34 H94 Q104 34 104 44 V72 Z" fill="#5a2f18" stroke="#12081f" stroke-width="5"/>
+    <rect x="30" y="38" width="12" height="30" rx="3" fill="#ffc933" stroke="#12081f" stroke-width="4"/>
+    <rect x="86" y="38" width="12" height="30" rx="3" fill="#ffc933" stroke="#12081f" stroke-width="4"/>
+
+    <!-- гора монет -->
+    <path d="M20 72 C20 54 30 46 42 44 C46 30 54 24 64 24 C74 24 82 30 86 44 C98 46 108 54 108 72 Z" fill="#ffc933" stroke="#12081f" stroke-width="5"/>
+    <ellipse cx="64" cy="36" rx="11" ry="8.5" fill="#ffc933" stroke="#12081f" stroke-width="3.5"/>
+    <ellipse cx="50" cy="49" rx="10" ry="8" fill="#ffc933" stroke="#12081f" stroke-width="3.5"/>
+    <ellipse cx="78" cy="49" rx="10" ry="8" fill="#ffc933" stroke="#12081f" stroke-width="3.5"/>
+    <ellipse cx="36" cy="62" rx="9" ry="7" fill="#ffc933" stroke="#12081f" stroke-width="3.5"/>
+    <ellipse cx="92" cy="62" rx="9" ry="7" fill="#ffc933" stroke="#12081f" stroke-width="3.5"/>
+    <ellipse cx="64" cy="60" rx="11" ry="8" fill="#ffc933" stroke="#12081f" stroke-width="3.5"/>
+    <!-- тень справа -->
+    <path d="M88 46 C100 48 106 58 106 70 L96 70 C98 60 94 52 88 46 Z" fill="#5a2f18" opacity="0.35"/>
+    <!-- блики -->
+    <ellipse cx="60" cy="33" rx="4" ry="2.4" fill="#fff8ee" opacity="0.75"/>
+    <ellipse cx="46" cy="46" rx="3.4" ry="2" fill="#fff8ee" opacity="0.65"/>
+    <ellipse cx="32" cy="59" rx="3" ry="1.8" fill="#fff8ee" opacity="0.6"/>
+
+    <!-- корпус сундука -->
+    <path d="M16 80 H112 V106 Q112 116 102 116 H26 Q16 116 16 106 Z" fill="#8a4b2a"/>
+    <path d="M19 102 H109 V106 Q109 113 101 113 H27 Q19 113 19 106 Z" fill="#5a2f18"/>
+    <rect x="26" y="78" width="14" height="38" fill="#ffc933" stroke="#12081f" stroke-width="4"/>
+    <rect x="88" y="78" width="14" height="38" fill="#ffc933" stroke="#12081f" stroke-width="4"/>
+    <path d="M16 80 H112 V106 Q112 116 102 116 H26 Q16 116 16 106 Z" fill="none" stroke="#12081f" stroke-width="5"/>
+
+    <!-- верхний обод -->
+    <rect x="12" y="64" width="104" height="16" rx="8" fill="#8a4b2a" stroke="#12081f" stroke-width="5"/>
+    <ellipse cx="34" cy="69" rx="10" ry="2.2" fill="#fff8ee" opacity="0.25"/>
+
+    <!-- замок -->
+    <rect x="53" y="84" width="22" height="22" rx="7" fill="#ffc933" stroke="#12081f" stroke-width="4"/>
+    <circle cx="64" cy="92" r="3.5" fill="#12081f"/>
+    <rect x="62" y="92" width="4" height="8" rx="2" fill="#12081f"/>
+    <ellipse cx="58.5" cy="88" rx="2.6" ry="1.8" fill="#fff8ee" opacity="0.7"/>
+  </g>
+
+  <!-- белые искры -->
+  <path d="M20 22 Q22 28 28 30 Q22 32 20 38 Q18 32 12 30 Q18 28 20 22 Z" fill="#fff8ee"/>
+  <path d="M108 12 Q110 20 118 22 Q110 24 108 32 Q106 24 98 22 Q106 20 108 12 Z" fill="#fff8ee"/>
+  <path d="M82 6 Q83.5 10.5 88 12 Q83.5 13.5 82 18 Q80.5 13.5 76 12 Q80.5 10.5 82 6 Z" fill="#fff8ee"/>
+</svg>

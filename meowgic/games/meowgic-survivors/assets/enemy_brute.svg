@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" width="88" height="88">
+  <g stroke="#12081f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- толстые лапы -->
+    <circle cx="13" cy="45" r="7.5" fill="#2a1740"/>
+    <circle cx="75" cy="45" r="7.5" fill="#2a1740"/>
+    <circle cx="15" cy="74" r="7.5" fill="#2a1740"/>
+    <circle cx="73" cy="74" r="7.5" fill="#2a1740"/>
+    <!-- тело -->
+    <ellipse cx="44" cy="56" rx="35" ry="25" fill="#2a1740"/>
+    <!-- уши -->
+    <circle cx="23" cy="24" r="8" fill="#2a1740"/>
+    <circle cx="65" cy="24" r="8" fill="#2a1740"/>
+    <!-- голова и морда -->
+    <ellipse cx="44" cy="24" rx="17" ry="14" fill="#2a1740"/>
+    <ellipse cx="44" cy="12" rx="10" ry="7" fill="#2a1740"/>
+    <!-- броня на спине -->
+    <rect x="16" y="46" width="56" height="30" rx="12" fill="#8a4b2a"/>
+  </g>
+
+  <!-- тень и блик брони -->
+  <path d="M19 64 Q44 71 69 64 Q68 74 56 74 L32 74 Q20 74 19 64Z" fill="#12081f" fill-opacity="0.35"/>
+  <path d="M24 57 Q26 51 36 51" fill="none" stroke="#c77a3a" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- свечение глаз -->
+  <circle cx="37" cy="21" r="5.5" fill="#ff3b5c" fill-opacity="0.3"/>
+  <circle cx="51" cy="21" r="5.5" fill="#ff3b5c" fill-opacity="0.3"/>
+  <circle cx="37" cy="21" r="2.8" fill="#ff3b5c"/>
+  <circle cx="51" cy="21" r="2.8" fill="#ff3b5c"/>
+
+  <!-- шлем -->
+  <path d="M23 44 Q23 27 44 26 Q65 27 65 44 Q44 51 23 44Z" fill="#8a4b2a" stroke="#12081f" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M27 43 Q44 49 61 43 Q60 46 44 47.5 Q28 46 27 43Z" fill="#12081f" fill-opacity="0.35"/>
+  <path d="M30 37 Q32 31 40 30" fill="none" stroke="#c77a3a" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- заклёпки -->
+  <g fill="#c77a3a" stroke="#12081f" stroke-width="2">
+    <circle cx="44" cy="35" r="2.5"/>
+    <circle cx="26" cy="66" r="2.5"/>
+    <circle cx="62" cy="66" r="2.5"/>
+  </g>
+</svg>

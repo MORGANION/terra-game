@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- ободок + обводка -->
+  <circle cx="32" cy="32" r="26" fill="#ffe27a" stroke="#12081f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- тень на ободке снизу-справа -->
+  <path d="M53.9 33.9 A22 22 0 0 1 33.9 53.9" fill="none" stroke="#d9a000" stroke-width="3" stroke-linecap="round"/>
+  <!-- основная поверхность монеты -->
+  <circle cx="32" cy="32" r="19.5" fill="#ffc933"/>
+  <!-- отпечаток кошачьей лапки -->
+  <g fill="#d9a000">
+    <ellipse cx="32" cy="37" rx="7.5" ry="5.5"/>
+    <ellipse cx="23.2" cy="30.5" rx="2.8" ry="3.7" transform="rotate(-25 23.2 30.5)"/>
+    <ellipse cx="28.4" cy="25" rx="2.8" ry="3.7" transform="rotate(-8 28.4 25)"/>
+    <ellipse cx="35.6" cy="25" rx="2.8" ry="3.7" transform="rotate(8 35.6 25)"/>
+    <ellipse cx="40.8" cy="30.5" rx="2.8" ry="3.7" transform="rotate(25 40.8 30.5)"/>
+  </g>
+  <!-- блик слева сверху -->
+  <ellipse cx="17.5" cy="17.5" rx="4" ry="2.1" transform="rotate(-45 17.5 17.5)" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1280" width="720" height="1280">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1030"/>
+      <stop offset="0.5" stop-color="#2a1a4a"/>
+      <stop offset="1" stop-color="#2a1a4a"/>
+    </linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a1a4a"/>
+      <stop offset="1" stop-color="#1b1030"/>
+    </linearGradient>
+    <radialGradient id="warm" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#d9480f" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#d9480f" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffc933" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffc933" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cyanGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4cc9f0" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#4cc9f0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="winGlow" cx="0.4" cy="0.65" r="0.65">
+      <stop offset="0" stop-color="#4cc9f0" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#4cc9f0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="pot" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#3a2466"/>
+      <stop offset="1" stop-color="#2a1740"/>
+    </radialGradient>
+    <linearGradient id="liquid" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4cc9f0"/>
+      <stop offset="1" stop-color="#2b8fb8"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1030" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#1b1030" stop-opacity="0.05"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.5" r="0.75">
+      <stop offset="0.55" stop-color="#12081f" stop-opacity="0"/>
+      <stop offset="1" stop-color="#12081f" stop-opacity="0.55"/>
+    </radialGradient>
+
+    <!-- book rows, bottom at y=0 -->
+    <g id="r1" opacity="0.72">
+      <rect x="10" y="-110" width="24" height="110" rx="5" fill="#d9480f"/>
+      <rect x="36" y="-95" width="22" height="95" rx="5" fill="#ffc933"/>
+      <rect x="60" y="-120" width="26" height="120" rx="5" fill="#4cc9f0"/>
+      <rect x="88" y="-100" width="22" height="100" rx="5" fill="#b565f0"/>
+      <rect x="112" y="-112" width="24" height="112" rx="5" fill="#d9480f"/>
+    </g>
+    <g id="r2" opacity="0.72">
+      <rect x="10" y="-100" width="22" height="100" rx="5" fill="#4cc9f0"/>
+      <rect x="34" y="-118" width="26" height="118" rx="5" fill="#d9480f"/>
+      <rect x="62" y="-92" width="22" height="92" rx="5" fill="#ffc933"/>
+      <rect x="86" y="-108" width="24" height="108" rx="5" fill="#6b3a4a"/>
+      <rect x="112" y="-96" width="24" height="96" rx="5" fill="#b565f0"/>
+    </g>
+    <g id="r3" opacity="0.72">
+      <rect x="10" y="-104" width="26" height="104" rx="5" fill="#ffc933"/>
+      <rect x="38" y="-120" width="22" height="120" rx="5" fill="#b565f0"/>
+      <rect x="62" y="-98" width="24" height="98" rx="5" fill="#d9480f"/>
+      <rect x="98" y="-110" width="22" height="110" rx="5" fill="#4cc9f0"/>
+      <rect x="122" y="-90" width="16" height="90" rx="5" fill="#d9480f"/>
+    </g>
+    <g id="r4" opacity="0.72">
+      <rect x="10" y="-100" width="24" height="100" rx="5" fill="#d9480f"/>
+      <rect x="36" y="-112" width="22" height="112" rx="5" fill="#4cc9f0"/>
+      <rect x="60" y="-90" width="26" height="90" rx="5" fill="#ffc933"/>
+    </g>
+
+    <g id="candle">
+      <circle cx="0" cy="-48" r="46" fill="url(#halo)"/>
+      <ellipse cx="0" cy="0" rx="13" ry="4" fill="#4a2a3e"/>
+      <rect x="-7" y="-34" width="14" height="34" rx="4" fill="#fff8ee" opacity="0.8"/>
+      <path d="M0 -66 C8 -56 8 -47 0 -42 C-8 -47 -8 -56 0 -66Z" fill="#ffc933"/>
+    </g>
+
+    <g id="shelf">
+      <rect x="-10" y="110" width="160" height="800" fill="#2b1840"/>
+      <rect x="0" y="130" width="140" height="770" fill="#1f1230"/>
+      <rect x="-10" y="110" width="160" height="20" rx="6" fill="#4a2a3e"/>
+      <use href="#r1" y="280"/>
+      <use href="#r2" y="430"/>
+      <use href="#r3" y="580"/>
+      <use href="#r4" y="730"/>
+      <use href="#r2" y="880"/>
+      <g fill="#4a2a3e">
+        <rect x="0" y="280" width="140" height="20"/>
+        <rect x="0" y="430" width="140" height="20"/>
+        <rect x="0" y="580" width="140" height="20"/>
+        <rect x="0" y="730" width="140" height="20"/>
+        <rect x="0" y="880" width="140" height="20"/>
+      </g>
+      <g fill="#6a3f55" opacity="0.5">
+        <rect x="0" y="280" width="140" height="4"/>
+        <rect x="0" y="430" width="140" height="4"/>
+        <rect x="0" y="580" width="140" height="4"/>
+        <rect x="0" y="730" width="140" height="4"/>
+        <rect x="0" y="880" width="140" height="4"/>
+      </g>
+      <use href="#candle" x="112" y="730"/>
+      <rect x="0" y="130" width="140" height="770" fill="url(#shade)"/>
+      <rect x="140" y="110" width="10" height="800" fill="#4a2a3e"/>
+    </g>
+  </defs>
+
+  <!-- wall -->
+  <rect width="720" height="1280" fill="url(#wall)"/>
+  <ellipse cx="360" cy="640" rx="300" ry="360" fill="url(#warm)"/>
+  <circle cx="360" cy="200" r="200" fill="url(#cyanGlow)" opacity="0.5"/>
+
+  <!-- floor -->
+  <rect x="0" y="904" width="720" height="376" fill="url(#floor)"/>
+  <rect x="0" y="890" width="720" height="16" fill="#3a2466" opacity="0.6"/>
+  <g stroke="#1b1030" stroke-width="4" stroke-linecap="round" opacity="0.5">
+    <path d="M0 970H720"/>
+    <path d="M0 1050H720"/>
+    <path d="M0 1140H720"/>
+    <path d="M0 1230H720"/>
+  </g>
+  <ellipse cx="360" cy="890" rx="200" ry="34" fill="#3a2466" opacity="0.5"/>
+
+  <!-- window -->
+  <rect x="235" y="306" width="250" height="22" rx="11" fill="#3a2466" opacity="0.85"/>
+  <circle cx="360" cy="200" r="116" fill="none" stroke="#12081f" stroke-width="3" opacity="0.35"/>
+  <circle cx="360" cy="200" r="104" fill="#1b1030"/>
+  <circle cx="410" cy="155" r="20" fill="#ffc933" opacity="0.85"/>
+  <circle cx="420" cy="148" r="17" fill="#1b1030"/>
+  <circle cx="360" cy="200" r="104" fill="url(#winGlow)"/>
+  <g fill="#4cc9f0" opacity="0.85">
+    <circle cx="315" cy="160" r="4"/>
+    <circle cx="330" cy="245" r="3"/>
+    <circle cx="415" cy="240" r="4"/>
+    <circle cx="375" cy="268" r="3"/>
+    <circle cx="302" cy="215" r="3"/>
+    <circle cx="438" cy="198" r="3"/>
+  </g>
+  <g stroke="#3a2466" stroke-width="8" stroke-linecap="round" opacity="0.9">
+    <path d="M360 98V302"/>
+    <path d="M258 200H462"/>
+  </g>
+  <circle cx="360" cy="200" r="108" fill="none" stroke="#3a2466" stroke-width="14"/>
+
+  <!-- shelves -->
+  <use href="#shelf"/>
+  <use href="#shelf" transform="translate(720 0) scale(-1 1)"/>
+
+  <!-- cauldron -->
+  <circle cx="150" cy="990" r="170" fill="url(#cyanGlow)"/>
+  <ellipse cx="92" cy="1118" rx="22" ry="12" fill="#2a1740"/>
+  <ellipse cx="208" cy="1118" rx="22" ry="12" fill="#2a1740"/>
+  <path d="M60 995 C36 1062 70 1122 150 1126 C230 1126 264 1062 240 995 Z" fill="url(#pot)" stroke="#12081f" stroke-opacity="0.4" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="150" cy="995" rx="92" ry="22" fill="#3a2466" stroke="#12081f" stroke-opacity="0.4" stroke-width="3"/>
+  <ellipse cx="150" cy="995" rx="76" ry="15" fill="url(#liquid)" opacity="0.9"/>
+  <g fill="#4cc9f0" opacity="0.6">
+    <circle cx="138" cy="950" r="7"/>
+    <circle cx="170" cy="932" r="5"/>
+    <circle cx="156" cy="908" r="4"/>
+  </g>
+
+  <!-- floor candles -->
+  <use href="#candle" transform="translate(590 1085) scale(1.2)"/>
+  <use href="#candle" transform="translate(648 1130) scale(0.9)"/>
+
+  <!-- vignette -->
+  <rect width="720" height="1280" fill="url(#vig)"/>
+</svg>
