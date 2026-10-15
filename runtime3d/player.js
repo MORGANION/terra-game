@@ -72,6 +72,7 @@ export class Input {
   setBot(move, run = false) { this.move.copy(move); this.run = run; }
 }
 
+const UPV = new THREE.Vector3(0, 1, 0);
 export class Player {
   constructor(scene, world, models, cfg, input, char = null) {
     this.world = world; this.cfg = cfg.player; this.input = input; this.scene = scene;
@@ -102,6 +103,63 @@ export class Player {
     if (!char || char === this.char) return;
     this.obj.remove(this.model); this.char = char; this.model = char.root; this.obj.add(this.model);
     this._sitBones = this._sitArms = null; this.parts = {};
+  }
+  // Стили выхлопа. base — два ровных оранжевых факела + серый дым. rocket — один атомный факел:
+  // белое ядро, голубое пламя, фиолетовая оболочка, «ромбы» ударных волн, искры и голубой свет.
+  buildJetFx() {
+    const old = this.jetFx; if (old) { old.group?.parent?.remove(old.group); old.parts.forEach(q => this.scene.remove(q)); old.light?.parent?.remove(old.light); }
+    const J = this.char?.jet || { style: 'base', nozzles: [[0.2, -0.12, -0.08], [-0.2, -0.12, -0.08]] };
+    const add = (c, o = 1, norm = false) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: norm ? THREE.NormalBlending : THREE.AdditiveBlending, depthWrite: false });
+    const fx = this.jetFx = { char: this.char, J, style: J.style, k: 0, nozzles: [], parts: [], sparks: [], group: new THREE.Group() };
+    this.scene.add(fx.group);
+    const rocket = J.style === 'rocket';
+    for (const lp of J.nozzles) {
+      const n = new THREE.Group(); n.userData.lp = new THREE.Vector3(...lp); fx.group.add(n); fx.group.renderOrder = 5;
+      const L = rocket ? 1.3 : 0.6, layers = rocket
+        ? [[0.22, L, '#3b1fb8', 0.75, true], [0.16, L * 0.9, '#0fc4ff', 0.95, true], [0.075, L * 0.62, '#eafeff', 1]]
+        : [[0.12, L, '#e8480f', 0.85, true], [0.075, L * 0.75, '#ff9a1e', 0.95, true], [0.04, L * 0.5, '#fff1b8', 1]];
+      for (const [r, h, c, o, nb] of layers) { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 12, 4, true), add(c, o, nb)); m.renderOrder = 6; m.geometry.rotateX(Math.PI); m.geometry.translate(0, -h / 2, 0); /* широкий срез у сопла, острие вниз */ m.userData.o = o; n.add(m); }
+      // кольцо сопла (раскалённый срез)
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(rocket ? 0.12 : 0.08, rocket ? 0.025 : 0.018, 6, 14), add(rocket ? '#9ef0ff' : '#ffd080', 1)); ring.rotation.x = Math.PI / 2; ring.userData.o = 1; n.add(ring);
+      if (rocket) for (let i = 0; i < 4; i++) { const d = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), add('#ffffff', 1, true)); d.scale.set(1, 1.7, 1); d.renderOrder = 7; d.position.y = -0.22 - i * 0.26; d.userData.o = 0.9 - i * 0.18; d.userData.diamond = i; n.add(d); }
+      fx.nozzles.push(n);
+    }
+    const smoke = rocket ? '#c9b8ff' : '#eeeae4';
+    for (let i = 0; i < (rocket ? 36 : 28); i++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(rocket ? 0.11 : 0.09, 1), new THREE.MeshBasicMaterial({ color: smoke, transparent: true, opacity: 0.5, depthWrite: false })); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.parts.push(q); }
+    if (rocket) for (let i = 0; i < 40; i++) { const q = new THREE.Mesh(new THREE.TetrahedronGeometry(0.035, 0), add(i % 3 ? '#4fe8ff' : '#ffffff', 1, true)); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.sparks.push(q); }
+    fx.light = new THREE.PointLight(rocket ? '#5fd8ff' : '#ffa040', 0, rocket ? 9 : 6, 1.6); fx.group.add(fx.light);
+  }
+  updateJetFx(dt) {
+    const fx = this.jetFx; if (!fx) return; const rocket = fx.style === 'rocket';
+    fx.k += ((this.jetting ? 1 : 0) - fx.k) * Math.min(1, dt * 14);
+    const bone = this.char && (this._jetBone ||= this.char.root.getObjectByName('mixamorigSpine2') || this.char.root.getObjectByName('mixamorig:Spine2'));
+    if (bone && this._jetBoneOf !== this.char) { this._jetBone = this.char.root.getObjectByName('mixamorigSpine2') || this.char.root.getObjectByName('mixamorig:Spine2'); this._jetBoneOf = this.char; }
+    const B = this._jetBone, bq = new THREE.Quaternion(), down = new THREE.Vector3();
+    if (B) { B.updateWorldMatrix(true, false); B.getWorldQuaternion(bq);
+      if (!fx.bind) { this.obj.updateMatrixWorld(true); fx.bind = B.matrixWorld.clone().invert().multiply(this.obj.matrixWorld); fx.bindQ = bq.clone().invert().multiply(this.obj.getWorldQuaternion(new THREE.Quaternion())); } }
+    const t = performance.now() / 1000, on = fx.k > 0.04, wp = [];
+    for (const n of fx.nozzles) {
+      n.visible = on; n.position.copy(n.userData.lp); if (B) { n.position.applyMatrix4(fx.bind); B.localToWorld(n.position); } else this.obj.localToWorld(n.position); n.quaternion.setFromAxisAngle(UPV, this.obj.rotation.y);   // струя строго вниз по миру
+      wp.push(n.position);
+      if (!on) continue;
+      const flick = rocket ? 0.85 + Math.sin(t * 47) * 0.08 + Math.random() * 0.15 : 0.6 + Math.random() * 0.5;
+      for (const m of n.children) { m.material.opacity = m.userData.o * fx.k;
+        if (m.geometry.type === 'ConeGeometry') { const w = 0.9 + Math.random() * 0.2; m.scale.set(w, 0.4 + fx.k * flick, w); m.rotation.y += 0.3; }
+        if (m.userData.diamond !== undefined) { const ph = (t * 6 + m.userData.diamond * 0.7) % 1; m.scale.setScalar(0.7 + 0.5 * Math.sin(ph * Math.PI)); m.material.opacity = m.userData.o * fx.k * (0.6 + 0.4 * Math.sin(t * 30 + m.userData.diamond)); } }
+    }
+    // направление струи — «вниз» кости в мире
+    down.set(0, -1, 0).applyQuaternion(fx.nozzles[0]?.quaternion || this.obj.quaternion);
+    fx.light.position.copy(wp[0] || this.pos).addScaledVector(down, rocket ? 0.6 : 0.3); if (fx.light.parent !== this.scene) { fx.group.remove(fx.light); this.scene.add(fx.light); }
+    fx.light.intensity = fx.k * (rocket ? 90 + Math.random() * 30 : 40 + Math.random() * 15);
+    fx.emit = (fx.emit || 0) + dt * (rocket ? 50 : 40) * (this.jetting ? 1 : 0);
+    while (fx.emit > 1 && wp.length) { fx.emit--; const q = fx.parts.find(p => p.userData.life <= 0); if (!q) break; const src = wp[(Math.random() * wp.length) | 0];
+      q.position.copy(src).addScaledVector(down, rocket ? 1.0 : 0.55); q.userData.v = down.clone().multiplyScalar(3 + Math.random() * 2).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)); q.userData.life = 0.6 + Math.random() * 0.3; q.visible = true; q.scale.setScalar(0.6); }
+    for (const q of fx.parts) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.multiplyScalar(1 - dt * 2.5); q.userData.v.y += dt * 1.5; q.scale.multiplyScalar(1 + dt * 2.2); q.material.opacity = Math.max(0, q.userData.life) * 0.7;
+      if (rocket) q.material.color.setHSL(0.72 - q.userData.life * 0.15, 0.5, 0.6 + q.userData.life * 0.2); else q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; }
+    if (rocket) { fx.sp = (fx.sp || 0) + dt * 70 * (this.jetting ? 1 : 0);
+      while (fx.sp > 1 && wp.length) { fx.sp--; const q = fx.sparks.find(p => p.userData.life <= 0); if (!q) break; q.position.copy(wp[0]).addScaledVector(down, 0.3 + Math.random() * 0.8);
+        q.userData.v = down.clone().multiplyScalar(4 + Math.random() * 4).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 1.5, (Math.random() - 0.5) * 4)); q.userData.life = 0.25 + Math.random() * 0.35; q.visible = true; }
+      for (const q of fx.sparks) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.y -= dt * 6; q.rotation.x += dt * 20; q.material.opacity = Math.min(1, q.userData.life * 4); if (q.userData.life <= 0) q.visible = false; } }
   }
   addSolid(x, z, r) { this.solids.push({ x, z, r }); }
 
@@ -214,27 +272,14 @@ export class Player {
     if (this.noFall > 0) this.noFall -= dt;
     if (!this.grounded) this.airTop = Math.max(this.airTop ?? this.pos.y, this.pos.y); else { this.airTop = this.pos.y; this.jetUsed = false; }
     if (this.pos.y <= ground) { if (!this.grounded) { this.landedFrom = this.jetUsed || this.noFall > 0 ? 0 : (this.airTop ?? ground) - ground; this.airTop = ground; this.jetUsed = false; } if (!this.grounded) this.landingSpeed = this.jetFuelMax ? Math.min(-this.vel.y, 10) : -this.vel.y; this.pos.y = ground; this.vel.y = 0; this.grounded = true; }
-    // Выхлоп джетпака: два факела из сопел ранца + дым-частицы
-    if (!this.jetFx) {
-      const fx = this.jetFx = { flames: [], parts: [], k: 0 };
-      const fm = new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
-      for (const sx of [-0.24, 0.24]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.9, 8, 1, true), fm); c.rotation.x = Math.PI; c.position.set(sx, 0.55, -0.4); const core = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.5, 6, 1, true), new THREE.MeshBasicMaterial({ color: '#fff6d0', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); core.position.y = 0.1; c.add(core); c.visible = false; this.obj.add(c); fx.flames.push(c); }
-      const pm = new THREE.MeshBasicMaterial({ color: '#eeeae4', transparent: true, opacity: 0.5, depthWrite: false });
-      for (let i = 0; i < 28; i++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 0), pm.clone()); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.parts.push(q); }
-      fx.light = new THREE.PointLight('#ffa040', 0, 6, 1.6); fx.light.position.set(0, 0.6, -0.35); this.obj.add(fx.light);
-    }
+    // Выхлоп джетпака: сопла привязаны к кости Spine2 (точно из баллонов, наклоняются вместе со спиной); стиль — от скина
+    if (!this.jetFx || this.jetFx.char !== this.char) this.buildJetFx();
     // Круглая тень на земле под героем в воздухе — видно высоту полёта
     if (!this.blob) { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,0.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
       this.blob = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false })); this.blob.rotation.x = -Math.PI / 2; this.scene.add(this.blob); }
     { const gy = this.groundAt ? this.groundAt(this.pos.x, this.pos.z, this.world.heightAt(this.pos.x, this.pos.z)) : this.world.heightAt(this.pos.x, this.pos.z), h = this.pos.y - gy;
       this.blob.visible = h > 0.25; this.blob.position.set(this.pos.x, gy + 0.05, this.pos.z); this.blob.scale.setScalar(Math.max(0.5, 1 - h * 0.08)); this.blob.material.opacity = Math.max(0.25, 1 - h * 0.12); }
-    { const fx = this.jetFx; fx.k += ((this.jetting ? 1 : 0) - fx.k) * Math.min(1, dt * 14);
-      for (const c of fx.flames) { c.visible = fx.k > 0.05; c.scale.set(1, 0.6 + fx.k * (0.8 + Math.random() * 0.5), 1); c.material.opacity = 0.9 * fx.k; }
-      fx.light.intensity = fx.k * (30 + Math.random() * 12);
-      fx.emit = (fx.emit || 0) + dt * 40 * (this.jetting ? 1 : 0);
-      while (fx.emit > 1) { fx.emit--; const q = fx.parts.find(p => p.userData.life <= 0); if (!q) break; const f = this.forward(), sx = (Math.random() < 0.5 ? -0.24 : 0.24);
-        q.position.set(this.pos.x - f.x * 0.35 + f.z * sx, this.pos.y + 0.45, this.pos.z - f.z * 0.35 - f.x * sx); q.userData.v = new THREE.Vector3((Math.random() - 0.5) * 0.8, -3 - Math.random() * 2, (Math.random() - 0.5) * 0.8); q.userData.life = 0.6 + Math.random() * 0.3; q.visible = true; q.scale.setScalar(0.6); }
-      for (const q of fx.parts) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.multiplyScalar(1 - dt * 2.5); q.userData.v.y += dt * 1.5; q.scale.multiplyScalar(1 + dt * 2.2); q.material.opacity = Math.max(0, q.userData.life) * 0.7; q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; } }
+    this.updateJetFx(dt);
     // Модель
     if (this.driving && this._seat) { this.pos.copy(this._seat); this.vel.set(0, 0, 0); this.grounded = true; }   // физика пешехода не двигает сидящего
     this.obj.position.copy(this.pos); if (!this.driving && (this.obj.rotation.x || this.obj.rotation.z)) { this.obj.rotation.x = 0; this.obj.rotation.z = 0; }

@@ -507,6 +507,21 @@
         "mine": "dig",
         "cheer": "cheer",
         "wave": "greet_01"
+      },
+      "jet": {
+        "style": "base",
+        "nozzles": [
+          [
+            0.29,
+            0.83,
+            -0.34
+          ],
+          [
+            -0.24,
+            0.86,
+            -0.34
+          ]
+        ]
       }
     },
     "fox_adult": {
@@ -555,7 +570,17 @@
         "cheer": "cheer",
         "wave": "greet_01"
       },
-      "skin": true
+      "skin": true,
+      "jet": {
+        "style": "rocket",
+        "nozzles": [
+          [
+            0.03,
+            0.82,
+            -0.34
+          ]
+        ]
+      }
     }
   },
   "props": [

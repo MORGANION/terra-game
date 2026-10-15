@@ -87,7 +87,7 @@ async function boot() {
   // Персонаж из Tripo (если есть): GLB со скелетом и клипами
   let heroChar = null, game_skinLoad = null;
   if (man.characters?.hero && !params.has('procedural')) {
-    try { const { loadCharacter, makeCharacter } = await import('./chars.js'); const H = man.characters.hero; heroChar = makeCharacter(await loadCharacter(H.url), H); heroChar.anims = H.anims; }
+    try { const { loadCharacter, makeCharacter } = await import('./chars.js'); const H = man.characters.hero; heroChar = makeCharacter(await loadCharacter(H.url), H); heroChar.anims = H.anims; heroChar.jet = H.jet; }
     catch (e) { Q.errors.push('hero glb: ' + e.message); }
   }
   // Остальные GLB-персонажи (популяция) — загружаются заранее, экземпляры создаёт Life
@@ -100,7 +100,7 @@ async function boot() {
   // Скины героя: персонажи из манифеста с флагом skin; грузятся по требованию
   const skinChars = { hero: heroChar };
   game_skinLoad = async id => { if (skinChars[id]) return skinChars[id]; const C = man.characters?.[id]; if (!C) return null;
-    const { loadCharacter, makeCharacter } = await import('./chars.js'); const c = makeCharacter(await loadCharacter(C.url), C); c.anims = C.anims; return (skinChars[id] = c); };
+    const { loadCharacter, makeCharacter } = await import('./chars.js'); const c = makeCharacter(await loadCharacter(C.url), C); c.anims = C.anims; c.jet = C.jet; return (skinChars[id] = c); };
   UI.applyScale(); addEventListener('resize', () => UI.applyScale());
   const ui = new UI(cfg);
   const game = new Game({ scene, world, models, player, cfg, platform: Platform, ui, qa: QA });
