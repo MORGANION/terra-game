@@ -133,9 +133,9 @@ async function boot() {
     const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 360 / 220, 0.1, 100);
     sc.add(new THREE.HemisphereLight('#fff4e0', '#5a3020', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 2.4); sun.position.set(3, 5, 4); sc.add(sun);
     const sk = id.startsWith?.('skin_') ? id : null; if (sk && !game._skinPv?.[sk]) { (game._skinPv ||= {})[sk] = 'loading'; game_skinLoad(sk).then(c => { game._skinPv[sk] = c; if (canvas.isConnected) game.previewModel(canvas, id); }); return; } if (game._skinPv?.[sk] === 'loading') return;
-    const src = sk ? skClone(game._skinPv[sk].root) : id === 'skin' ? player.model : models.instance(id === 'drone' ? 'oxygen_gen' : id); const o = id === 'skin' ? src.clone(true) : src;
-    const box = new THREE.Box3().setFromObject(o), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3()); o.position.sub(c); const g0 = new THREE.Group(); g0.add(o); sc.add(g0);
-    const R = size.length() / 2, D = R / Math.sin(THREE.MathUtils.degToRad(15)) * 0.8; cam.position.set(D * 0.55, D * 0.38, D * 0.74); cam.lookAt(0, 0, 0);
+    const src = sk ? (() => { const C = game._skinPv[sk]; C.play?.(C.anims?.idle || 'idle', { fade: 0 }); C.update?.(0.5); return skClone(C.root); })() : id === 'skin' ? player.model : models.instance(id === 'drone' ? 'oxygen_gen' : id); const o = id === 'skin' ? src.clone(true) : src;
+    o.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(o, true), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3()); o.position.sub(c); const g0 = new THREE.Group(); g0.add(o); sc.add(g0);
+    const R = size.length() / 2, D = R / Math.sin(THREE.MathUtils.degToRad(15)) * (sk ? 1.0 : 0.72); /* скин высокий — дальше, техника — ближе */ cam.position.set(D * 0.55, D * 0.38, D * 0.74); cam.lookAt(0, 0, 0);
     if (id === 'skin' && !sk) o.traverse(m => { if (m.isMesh && m.material?.color && m.name !== 'outline') { m.material = m.material.clone(); m.material.color.lerp(new THREE.Color('#5cd6a8'), 0.55); } });
     const ctx = canvas.getContext('2d'); let t0 = performance.now();
     const tick = () => { if (!canvas.isConnected || document.getElementById('dprev')?.style.display === 'none') return; g0.rotation.y = (performance.now() - t0) / 1400; r.render(sc, cam); ctx.clearRect(0, 0, 360, 220); ctx.drawImage(r.domElement, 0, 0); requestAnimationFrame(tick); };

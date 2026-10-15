@@ -145,7 +145,8 @@ function splitWheels(mesh) {
   // каждой части — свои копии атрибутов, сдвинутые в центр колеса (общий буфер не трогаем)
   const parts = wheels.map((w, i) => { const g = new THREE.BufferGeometry(); for (const a in geo.attributes) g.setAttribute(a, geo.attributes[a].clone()); g.setIndex(tris[i]);
     const pa = g.attributes.position; for (let v = 0; v < pa.count; v++) pa.setXYZ(v, pa.getX(v) - w.c.x, pa.getY(v) - w.c.y, pa.getZ(v) - w.c.z); return { geo: g, c: w.c, R: w.R }; });
-  geo.setIndex(keep);
+  const body = geo.clone(); body.setIndex(keep);   // общий прототип не трогаем: превью и прочие инстансы остаются с колёсами
+  parts.body = body;
   return (geo.userData.wheelSplit = parts);
 }
 
@@ -153,6 +154,7 @@ export function rigWheels(V) {
   let mesh = null; V.obj.traverse(o => { if (!mesh && o.isMesh && o.name !== 'outline' && o.geometry.index) mesh = o; });
   if (!mesh) return;
   const parts = splitWheels(mesh); if (!parts) return;
+  mesh.geometry = parts.body; const olm = mesh.children.find(o => o.name === 'outline'); if (olm) olm.geometry = parts.body;
   V.obj.updateMatrixWorld(true);
   const inv = V.obj.matrixWorld.clone().invert(), k = mesh.getWorldScale(new V3()).x / V.obj.getWorldScale(new V3()).x;
   const ol = mesh.children.find(o => o.name === 'outline'), Cw = V.body.C.wheels;
