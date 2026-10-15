@@ -112,7 +112,8 @@ async function boot() {
   const now = () => { try { return Platform.ysdk?.serverTime?.() || Date.now(); } catch { return Date.now(); } };
   const dayKey = () => { const d = new Date(now()); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
   game.skins = {
-    owned: () => ({ hero: true, ...(game.state.skins || {}) }),
+    // скины всех уже забранных дней календаря — даже если день забран до появления скина (награда задним числом)
+    owned: () => { const o = { hero: true, ...(game.state.skins || {}) }, n = game.state.daily?.claimed || 0; cfg.daily_calendar.slice(0, n).forEach(d => { if (d.skin && man.characters?.[d.skin]) o[d.skin] = true; }); return o; },
     cur: () => game.state.skin || 'hero',
     async wear(id) { if (!this.owned()[id]) return false; const c = await game_skinLoad(id); if (!c) return false; player.setChar(c); game.state.skin = id; game.save?.(); return true; },
   };
