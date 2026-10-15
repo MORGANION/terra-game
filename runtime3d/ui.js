@@ -522,6 +522,7 @@ export class UI {
     row('Чертёж: Марсоход', () => { g.state.bps.rover = 1; g.save(); }, g.state.bps?.rover ? 'уже изучен — Крафт (C) → Марсоход' : 'рецепт появится в Крафте');
     row('Ресурсы на марсоход', () => { g.give?.({}) ; for (const [k, v] of Object.entries({ iron: 20, silicon: 8, titanium: 4, cobalt: 4 })) g.state.inv[k] = (g.state.inv[k] || 0) + v; }, '20 железа, 8 кремния, 4 титана, 4 кобальта');
     row('Поставить марсоход рядом', () => { const r = g.cfg.recipes.find(x => x.id === 'rover'), p = g.player.pos, f = g.player.forward(); const b = { model: 'rover', recipe: 'rover', x: +(p.x + f.x * 4).toFixed(2), z: +(p.z + f.z * 4).toFixed(2), rot: g.player.obj.rotation.y }; g.state.buildings.push(b); g.spawnBuilding(b, true); g.save(); }, 'без ресурсов, сразу перед героем');
+    row('Джетпак 1 уровня', () => { const st = g.state; st.bps.jet = Math.max(st.bps.jet || 0, 1); st.gear.jet = Math.max(st.gear.jet || 0, 1); g.explore.applyGear(); g.player.jetFuel = g.player.jetFuelMax; g.save(); }, (g.state.gear?.jet || 0) >= 1 ? 'уже есть — двойной прыжок (Пробел в воздухе)' : 'чертёж + сразу надет, без ресурсов');
     row('Следующий день календаря', () => { g.daily?.dev(); }, `сейчас открыто дней: ${g.state.daily?.claimed || 0}`);
     row('Сбросить календарь', () => { g.state.daily = { claimed: 0, last: '' }; g.save(); });
     row('+50 ко всем ресурсам', () => { for (const k of ['iron', 'silicon', 'ice', 'titanium', 'cobalt']) g.state.inv[k] = (g.state.inv[k] || 0) + 50; });

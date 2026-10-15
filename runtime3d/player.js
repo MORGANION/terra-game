@@ -105,7 +105,7 @@ export class Player {
     this._sitBones = this._sitArms = null; this.parts = {};
   }
   // Стили выхлопа. base — два ровных оранжевых факела + серый дым. rocket — один атомный факел:
-  // белое ядро, голубое пламя, фиолетовая оболочка, «ромбы» ударных волн, искры и голубой свет.
+  // белое ядро, розовое пламя, малиновая оболочка, «ромбы» ударных волн, розовые искры и свет.
   buildJetFx() {
     const old = this.jetFx; if (old) { old.group?.parent?.remove(old.group); old.parts.forEach(q => this.scene.remove(q)); old.light?.parent?.remove(old.light); }
     const J = this.char?.jet || { style: 'base', nozzles: [[0.2, -0.12, -0.08], [-0.2, -0.12, -0.08]] };
@@ -116,27 +116,30 @@ export class Player {
     for (const lp of J.nozzles) {
       const n = new THREE.Group(); n.userData.lp = new THREE.Vector3(...lp); fx.group.add(n); fx.group.renderOrder = 5;
       const L = rocket ? 1.3 : 0.6, layers = rocket
-        ? [[0.22, L, '#3b1fb8', 0.75, true], [0.16, L * 0.9, '#0fc4ff', 0.95, true], [0.075, L * 0.62, '#eafeff', 1]]
+        ? [[0.2, L, '#b0106e', 0.8, true], [0.14, L * 0.88, '#ff3fa8', 0.95, true], [0.065, L * 0.6, '#fff0fa', 1]]
         : [[0.12, L, '#e8480f', 0.85, true], [0.075, L * 0.75, '#ff9a1e', 0.95, true], [0.04, L * 0.5, '#fff1b8', 1]];
       for (const [r, h, c, o, nb] of layers) { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 12, 4, true), add(c, o, nb)); m.renderOrder = 6; m.geometry.rotateX(Math.PI); m.geometry.translate(0, -h / 2, 0); /* широкий срез у сопла, острие вниз */ m.userData.o = o; n.add(m); }
       // кольцо сопла (раскалённый срез)
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(rocket ? 0.12 : 0.08, rocket ? 0.025 : 0.018, 6, 14), add(rocket ? '#9ef0ff' : '#ffd080', 1)); ring.rotation.x = Math.PI / 2; ring.userData.o = 1; n.add(ring);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(rocket ? 0.12 : 0.08, rocket ? 0.025 : 0.018, 6, 14), add(rocket ? '#ffb0e0' : '#ffd080', 1)); ring.rotation.x = Math.PI / 2; ring.userData.o = 1; n.add(ring);
       if (rocket) for (let i = 0; i < 4; i++) { const d = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), add('#ffffff', 1, true)); d.scale.set(1, 1.7, 1); d.renderOrder = 7; d.position.y = -0.22 - i * 0.26; d.userData.o = 0.9 - i * 0.18; d.userData.diamond = i; n.add(d); }
       fx.nozzles.push(n);
     }
-    const smoke = rocket ? '#c9b8ff' : '#eeeae4';
+    const smoke = rocket ? '#f0c0dc' : '#eeeae4';
     for (let i = 0; i < (rocket ? 36 : 28); i++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(rocket ? 0.11 : 0.09, 1), new THREE.MeshBasicMaterial({ color: smoke, transparent: true, opacity: 0.5, depthWrite: false })); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.parts.push(q); }
-    if (rocket) for (let i = 0; i < 40; i++) { const q = new THREE.Mesh(new THREE.TetrahedronGeometry(0.035, 0), add(i % 3 ? '#4fe8ff' : '#ffffff', 1, true)); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.sparks.push(q); }
-    fx.light = new THREE.PointLight(rocket ? '#5fd8ff' : '#ffa040', 0, rocket ? 9 : 6, 1.6); fx.group.add(fx.light);
+    if (rocket) for (let i = 0; i < 40; i++) { const q = new THREE.Mesh(new THREE.TetrahedronGeometry(0.035, 0), add(i % 3 ? '#ff7ac8' : '#ffffff', 1, true)); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.sparks.push(q); }
+    fx.light = new THREE.PointLight(rocket ? '#ff5cb8' : '#ffa040', 0, rocket ? 9 : 6, 1.6); fx.group.add(fx.light);
   }
   updateJetFx(dt) {
     const fx = this.jetFx; if (!fx) return; const rocket = fx.style === 'rocket';
     fx.k += ((this.jetting ? 1 : 0) - fx.k) * Math.min(1, dt * 14);
-    const bone = this.char && (this._jetBone ||= this.char.root.getObjectByName('mixamorigSpine2') || this.char.root.getObjectByName('mixamorig:Spine2'));
-    if (bone && this._jetBoneOf !== this.char) { this._jetBone = this.char.root.getObjectByName('mixamorigSpine2') || this.char.root.getObjectByName('mixamorig:Spine2'); this._jetBoneOf = this.char; }
-    const B = this._jetBone, bq = new THREE.Quaternion(), down = new THREE.Vector3();
-    if (B) { B.updateWorldMatrix(true, false); B.getWorldQuaternion(bq);
-      if (!fx.bind) { this.obj.updateMatrixWorld(true); fx.bind = B.matrixWorld.clone().invert().multiply(this.obj.matrixWorld); fx.bindQ = bq.clone().invert().multiply(this.obj.getWorldQuaternion(new THREE.Quaternion())); } }
+    if (fx.B === undefined) {   // кость ранца и bind-матрица «тело → кость» по позе привязки (не зависит от текущей анимации)
+      fx.B = null; let sm = null; this.char?.root.traverse(o => { if (!sm && o.isSkinnedMesh) sm = o; });
+      const bi = sm ? sm.skeleton.bones.findIndex(b => /Spine2$/.test(b.name)) : -1;
+      if (bi >= 0) { fx.B = sm.skeleton.bones[bi]; this.obj.updateMatrixWorld(true);
+        fx.bind = sm.skeleton.boneInverses[bi].clone().multiply(sm.bindMatrix).multiply(sm.matrixWorld.clone().invert()).multiply(this.obj.matrixWorld); }
+    }
+    const B = fx.B, down = new THREE.Vector3();
+    if (B) B.updateWorldMatrix(true, false);
     const t = performance.now() / 1000, on = fx.k > 0.04, wp = [];
     for (const n of fx.nozzles) {
       n.visible = on; n.position.copy(n.userData.lp); if (B) { n.position.applyMatrix4(fx.bind); B.localToWorld(n.position); } else this.obj.localToWorld(n.position); n.quaternion.setFromAxisAngle(UPV, this.obj.rotation.y);   // струя строго вниз по миру
@@ -155,7 +158,7 @@ export class Player {
     while (fx.emit > 1 && wp.length) { fx.emit--; const q = fx.parts.find(p => p.userData.life <= 0); if (!q) break; const src = wp[(Math.random() * wp.length) | 0];
       q.position.copy(src).addScaledVector(down, rocket ? 1.0 : 0.55); q.userData.v = down.clone().multiplyScalar(3 + Math.random() * 2).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)); q.userData.life = 0.6 + Math.random() * 0.3; q.visible = true; q.scale.setScalar(0.6); }
     for (const q of fx.parts) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.multiplyScalar(1 - dt * 2.5); q.userData.v.y += dt * 1.5; q.scale.multiplyScalar(1 + dt * 2.2); q.material.opacity = Math.max(0, q.userData.life) * 0.7;
-      if (rocket) q.material.color.setHSL(0.72 - q.userData.life * 0.15, 0.5, 0.6 + q.userData.life * 0.2); else q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; }
+      if (rocket) q.material.color.setHSL(0.9 + q.userData.life * 0.03, 0.55, 0.62 + q.userData.life * 0.2); else q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; }
     if (rocket) { fx.sp = (fx.sp || 0) + dt * 70 * (this.jetting ? 1 : 0);
       while (fx.sp > 1 && wp.length) { fx.sp--; const q = fx.sparks.find(p => p.userData.life <= 0); if (!q) break; q.position.copy(wp[0]).addScaledVector(down, 0.3 + Math.random() * 0.8);
         q.userData.v = down.clone().multiplyScalar(4 + Math.random() * 4).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 1.5, (Math.random() - 0.5) * 4)); q.userData.life = 0.25 + Math.random() * 0.35; q.visible = true; }
