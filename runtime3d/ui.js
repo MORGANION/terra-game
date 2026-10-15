@@ -553,7 +553,15 @@ export class UI {
     let x = P.right / z + 8; if (x + wpv > W - 4) x = P.left / z - wpv - 8;
     if (x >= 4) { pv.style.left = x + 'px'; pv.style.top = Math.min(H - 350, Math.max(8, P.top / z)) + 'px'; }
     else { pv.style.left = (P.left / z + (P.width / z - wpv) / 2) + 'px'; pv.style.top = (P.top / z + 56) + 'px'; } // узкий экран — по центру окна, под заголовком
-    if (d.preview) this.g.previewModel?.(pv.querySelector('canvas'), d.preview);
+    if (d.preview) this.g.previewModel?.(pv.querySelector('canvas'), d.preview === 'skin' && d.skin?.startsWith('skin_') ? d.skin : d.preview);
+  }
+  skinsHtml() {
+    const g = this.g; if (!g.skins) return '';
+    const own = g.skins.owned(), cur = g.skins.cur(), names = { hero: 'Стандартный', ...Object.fromEntries(Object.entries(g.cfg.skins || {}).map(([k, v]) => [k, v.name])) };
+    const all = ['hero', ...Object.keys(g.cfg.skins || {})];
+    return `<div class="note sec"><span class="secno">${ic('suit')}</span>Скафандр</div><div class="dbtns">` + all.map(id => own[id]
+      ? `<button class="btn ${id === cur ? 'ok' : 'sec'}" data-skin="${id}" ${id === cur ? 'disabled' : ''}>${names[id] || id}${id === cur ? ' ✓' : ''}</button>`
+      : `<button class="btn sec" disabled>${names[id] || id} 🔒</button>`).join('') + `</div>`;
   }
   renderSettings() {
     const S = this.settings, body = this.el('pbody');
@@ -563,6 +571,7 @@ export class UI {
       + `<div class="note sec"><span class="secno">${ic('lang')}</span>Язык</div>`
       + `<div class="set">${ic('lang')}<label for="s_lang">Язык</label><select id="s_lang"><option value="ru">Русский</option><option value="en">English (скоро)</option><option value="tr">Türkçe (скоро)</option></select></div>`
       + `<div class="note">Переводы появятся в следующих версиях — настройки уже сохраняются.</div>`
+      + this.skinsHtml()
       + `<div class="note sec"><span class="secno">${ic('timer')}</span>Сохранение</div><div class="dbtns"><button class="btn bad" id="b_restart">Начать заново</button></div>`;
     const save = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch {} dispatchEvent(new CustomEvent('terra-settings', { detail: S })); };
     for (const id of ['master', 'music', 'sfx']) {
@@ -570,6 +579,7 @@ export class UI {
       inp.addEventListener('input', () => { S[id] = inp.value / 100; inp.nextElementSibling.textContent = inp.value + '%'; save(); });
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) inp.addEventListener(ev, e => e.stopPropagation(), { passive: true });
     }
+    body.querySelectorAll('[data-skin]').forEach(b => b.onclick = async e => { e.stopPropagation(); b.disabled = true; await this.g.skins?.wear(b.dataset.skin); this.renderSettings(); });
     body.querySelector('#b_restart').onclick = async e => { e.stopPropagation(); this.close();
       const id = await this.dialog(`<h2>Начать заново?</h2><p>Весь прогресс планеты, постройки, снаряжение и Род будут удалены. Это нельзя отменить.</p>`, [['rs_no', 'Отмена', 'sec'], ['rs_yes', 'Удалить и начать', 'bad']]);
       if (id !== 'rs_yes') return; this.g.restarting = true; try { localStorage.removeItem(this.g.saveKey()); } catch {} location.reload(); };

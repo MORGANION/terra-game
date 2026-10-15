@@ -5,6 +5,7 @@ import { Models } from './models.js';
 import { Input, Player } from './player.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
+import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const params = new URLSearchParams(location.search);
 const QA_MODE = params.has('qa');
@@ -84,7 +85,7 @@ async function boot() {
   const world = new World(scene, cfg);
   const input = new Input(renderer.domElement);
   // Персонаж из Tripo (если есть): GLB со скелетом и клипами
-  let heroChar = null;
+  let heroChar = null, game_skinLoad = null;
   if (man.characters?.hero && !params.has('procedural')) {
     try { const { loadCharacter, makeCharacter } = await import('./chars.js'); const H = man.characters.hero; heroChar = makeCharacter(await loadCharacter(H.url), H); heroChar.anims = H.anims; }
     catch (e) { Q.errors.push('hero glb: ' + e.message); }
@@ -96,6 +97,10 @@ async function boot() {
     catch (e) { Q.errors.push(id + ' glb: ' + e.message); }
   }
   const player = new Player(scene, world, models, cfg, input, heroChar);
+  // Скины героя: персонажи из манифеста с флагом skin; грузятся по требованию
+  const skinChars = { hero: heroChar };
+  game_skinLoad = async id => { if (skinChars[id]) return skinChars[id]; const C = man.characters?.[id]; if (!C) return null;
+    const { loadCharacter, makeCharacter } = await import('./chars.js'); const c = makeCharacter(await loadCharacter(C.url), C); c.anims = C.anims; return (skinChars[id] = c); };
   UI.applyScale(); addEventListener('resize', () => UI.applyScale());
   const ui = new UI(cfg);
   const game = new Game({ scene, world, models, player, cfg, platform: Platform, ui, qa: QA });
@@ -106,6 +111,12 @@ async function boot() {
   // ---------- Календарь наград за вход: один шаг за новый календарный день (серверное время Яндекса, иначе — устройство) ----------
   const now = () => { try { return Platform.ysdk?.serverTime?.() || Date.now(); } catch { return Date.now(); } };
   const dayKey = () => { const d = new Date(now()); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  game.skins = {
+    owned: () => ({ hero: true, ...(game.state.skins || {}) }),
+    cur: () => game.state.skin || 'hero',
+    async wear(id) { if (!this.owned()[id]) return false; const c = await game_skinLoad(id); if (!c) return false; player.setChar(c); game.state.skin = id; game.save?.(); return true; },
+  };
+  if (game.state.skin && game.state.skin !== 'hero') game.skins.wear(game.state.skin).catch(e => Q.errors.push('skin: ' + e.message));
   game.daily = {
     st: () => (game.state.daily ??= { claimed: 0, last: '' }),
     canClaim() { const s = this.st(); return s.claimed < cfg.daily_calendar.length && s.last !== dayKey(); },
@@ -120,10 +131,11 @@ async function boot() {
     const r = (game._pvr ||= new THREE.WebGLRenderer({ antialias: true, alpha: true })); r.setSize(360, 220, false);
     const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(30, 360 / 220, 0.1, 100);
     sc.add(new THREE.HemisphereLight('#fff4e0', '#5a3020', 2.2)); const sun = new THREE.DirectionalLight('#ffffff', 2.4); sun.position.set(3, 5, 4); sc.add(sun);
-    const src = id === 'skin' ? player.model : models.instance(id === 'drone' ? 'oxygen_gen' : id); const o = id === 'skin' ? src.clone(true) : src;
+    const sk = id.startsWith?.('skin_') ? id : null; if (sk && !game._skinPv?.[sk]) { (game._skinPv ||= {})[sk] = 'loading'; game_skinLoad(sk).then(c => { game._skinPv[sk] = c; if (canvas.isConnected) game.previewModel(canvas, id); }); return; } if (game._skinPv?.[sk] === 'loading') return;
+    const src = sk ? skClone(game._skinPv[sk].root) : id === 'skin' ? player.model : models.instance(id === 'drone' ? 'oxygen_gen' : id); const o = id === 'skin' ? src.clone(true) : src;
     const box = new THREE.Box3().setFromObject(o), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3()); o.position.sub(c); const g0 = new THREE.Group(); g0.add(o); sc.add(g0);
     const R = size.length() / 2, D = R / Math.sin(THREE.MathUtils.degToRad(15)) * 0.8; cam.position.set(D * 0.55, D * 0.38, D * 0.74); cam.lookAt(0, 0, 0);
-    if (id === 'skin') o.traverse(m => { if (m.isMesh && m.material?.color && m.name !== 'outline') { m.material = m.material.clone(); m.material.color.lerp(new THREE.Color('#5cd6a8'), 0.55); } });
+    if (id === 'skin' && !sk) o.traverse(m => { if (m.isMesh && m.material?.color && m.name !== 'outline') { m.material = m.material.clone(); m.material.color.lerp(new THREE.Color('#5cd6a8'), 0.55); } });
     const ctx = canvas.getContext('2d'); let t0 = performance.now();
     const tick = () => { if (!canvas.isConnected || document.getElementById('dprev')?.style.display === 'none') return; g0.rotation.y = (performance.now() - t0) / 1400; r.render(sc, cam); ctx.clearRect(0, 0, 360, 220); ctx.drawImage(r.domElement, 0, 0); requestAnimationFrame(tick); };
     tick();

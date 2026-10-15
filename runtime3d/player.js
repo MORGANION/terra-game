@@ -97,6 +97,12 @@ export class Player {
     this.mining = 0;
     this.solids = [];           // круглые препятствия {x,z,r}
   }
+  // Сменить модель героя (скин): новый скелетный персонаж вместо текущего, позиция/состояние сохраняются
+  setChar(char) {
+    if (!char || char === this.char) return;
+    this.obj.remove(this.model); this.char = char; this.model = char.root; this.obj.add(this.model);
+    this._sitBones = this._sitArms = null; this.parts = {};
+  }
   addSolid(x, z, r) { this.solids.push({ x, z, r }); }
 
   // Поза сидя (вождение): после idle разворачиваем кости ног в мировых направлениях — бедро вперёд, голень вниз (не зависит от осей рига)
