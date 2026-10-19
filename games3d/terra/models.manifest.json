@@ -685,6 +685,14 @@
       "rotY": 0
     },
     {
+      "id": "rover_ice",
+      "glb": "assets/rover_ice.glb",
+      "size": 3.4,
+      "sink": 0,
+      "outline": 0.04,
+      "rotY": 0
+    },
+    {
       "id": "lm_geo",
       "glb": "assets/lm_geo.glb",
       "size": 10,

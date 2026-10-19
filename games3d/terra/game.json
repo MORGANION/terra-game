@@ -2252,7 +2252,7 @@
       "ice": {
         "name": "Лёд",
         "suit": "#6cc0ff",
-        "rover": "#6cc0ff",
+        "rover_model": "rover_ice",
         "hull": "#e4f3ff",
         "trim": "#35b6ff",
         "stripe": "#1f78c8",

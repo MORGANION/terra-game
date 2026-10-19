@@ -218,7 +218,7 @@ export class Game {
       for (const sg of [1, -1]) { const x = V.b.x + Math.cos(a) * 2 * sg, z = V.b.z - Math.sin(a) * 2 * sg, y = this.groundY(x, z, vy), q = { x, z }; this.blockout?.col?.collide(q, { x: V.b.x, z: V.b.z }, vy - 0.6);
         if (Math.abs(y - (vy - 0.6)) < 1.2 && Math.hypot(q.x - x, q.z - z) < 0.05) { ex = x; ez = z; ey = y; break; } }
       this.player.pos.set(ex, ey + 0.05, ez); this.player.obj.visible = true; this.player.resetFall(1); this.player.driving = null; this.save(); return; }
-    const V = this.nearVehicle(); if (!V) return; this.driving = V; this.player.driving = V; V.speed = 0; this.player.yaw = V.b.rot + Math.PI; this.sfx?.play('engine_start'); this.qa.event('drive', {});
+    const V = this.nearVehicle(); if (!V) return; this.driving = V; this.player.driving = V; V.speed = 0; if (V.modelId === 'rover_ice') this.player.obj.visible = false;   // закрытая кабина «Айсберга»: водитель внутри не виден this.player.yaw = V.b.rot + Math.PI; this.sfx?.play('engine_start'); this.qa.event('drive', {});
   }
   // «Вытащить из застревания» (настройки): марсоход рядом/под нами — на ближайшую ровную точку колёсами вниз; иначе — героя.
   safeSpot(x0, z0, opt = {}) {

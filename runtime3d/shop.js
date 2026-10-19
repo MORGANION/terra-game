@@ -1,6 +1,7 @@
 // Магазин: тематические наборы (перекраска скафандра/марсохода/базы), стили планеты, креатив-режим, витрина.
 // Данные — game.json monetization.{iap, themes, styles, soon}. Любая покупка отключает межстраничную рекламу.
 import * as THREE from 'three';
+import { rigWheels } from './vehicle.js';
 
 // Цвета базовой палитры построек (build.js PAL) → ключ темы
 const MAP = { e8e2d6: 'hull', d9cfbd: 'hull', d9d1c2: 'hull', f08a3c: 'trim', '9b3a22': 'stripe', c9563a: 'roof' };
@@ -57,12 +58,22 @@ export class Shop {
   retheme(force) {
     const g = this.g, id = g.state.theme, T = id === 'default' ? null : this.M.themes?.[id];
     const mark = o => { if (!o) return false; if (!force && o.userData.theme === id) return false; o.userData.theme = id; return true; };
-    if (mark(g.player.model)) this.paintSkin(g.player.model, (g.state.skin || 'hero') === 'hero' ? T?.suit : null, id + 'suit');   // фирменные скины (Ред Рокет) не перекрашиваем
-    for (const V of g.vehicles || []) if (mark(V.obj)) this.paintSkin(V.obj, T?.rover, id + 'rover');
+    // скафандр и марсоход шейдером НЕ перекрашиваем (выглядит плохо) — только готовые модели наборов
+    for (const V of g.vehicles || []) if (mark(V.obj)) { this.swapRover(V, T?.rover_model); }
     const B = g.builder; if (!B) return;
     for (const D of B.domes || []) if (mark(D.obj)) this.paintBuild(D.obj, T, id);
     for (const o of B.mobjs?.values() || []) if (mark(o)) this.paintBuild(o, T, id);
     for (const o of B.objs?.values() || []) if (mark(o)) this.paintBuild(o, T, id);
+  }
+  // Премиальная модель марсохода из набора: меняем содержимое V.obj (физика и позиция остаются), колёса — заново
+  swapRover(V, mid) {
+    const g = this.g, want = mid && g.models.protos[mid] ? mid : 'rover';
+    if ((V.modelId || 'rover') === want) return;
+    const n = g.models.instance(want);
+    for (const c of [...V.obj.children]) V.obj.remove(c);
+    for (const c of [...n.children]) V.obj.add(c);
+    V.modelId = want; V.wheels = null; V.obj.updateMatrixWorld(true);
+    try { rigWheels(V); } catch (e) { (window.__qa?.errors || []).push('wheels: ' + e.message); }
   }
   update(dt) { this.t += dt; if (this.t > 0.7) { this.t = 0; this.retheme(false); } }
 
