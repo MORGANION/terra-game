@@ -331,7 +331,7 @@ export class World {
   // ---------- Вода: своя гладь в каждой лощине/кратере, уровень = дно + заполнение × глубина ----------
   buildWater() {
     this.waterUniforms = { uTime: { value: 0 }, uFrost: this.groundUniforms.uFrost, uFrostAmt: this.groundUniforms.uFrostAmt };
-    const mat = new THREE.MeshStandardMaterial({ color: this.W.water_color || '#3f8fc4', transparent: true, opacity: 0.62, roughness: 0.25, metalness: 0.05, flatShading: true });
+    const mat = this.waterMat = new THREE.MeshStandardMaterial({ color: this.style?.water || this.W.water_color || '#3f8fc4', transparent: true, opacity: 0.62, roughness: 0.25, metalness: 0.05, flatShading: true });
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, this.waterUniforms);
       sh.vertexShader = sh.vertexShader
@@ -489,14 +489,16 @@ export class World {
 
   // Ночь (n 0..1) и буря (s 0..1) поверх цвета стадии — вызывать после applyTerraform
   setScorch(i, x, z, r, amt) { this.groundUniforms.uScorch.value[i].set(x, z, r, amt); }
+  // Стиль планеты из магазина: null — классика; иначе цвета грунта/неба/воды/зелени/ночи поверх стадий терраформации
+  setStyle(st) { this.style = st; if (this.waterMat) this.waterMat.color.set(st?.water || this.W.water_color || '#3f8fc4'); this._styleDirty = true; }
   applyAtmos(n, s, sc) {
     this.stormAmt = s; this.stormColor = sc;
-    const dark = new THREE.Color('#0a1226'), st = new THREE.Color(sc);
+    const dark = new THREE.Color(this.style?.night?.[0] || '#0a1226'), st = new THREE.Color(sc);
     this.sun.intensity = 2.2 * (1 - 0.9 * n) * (1 - 0.65 * s);
     this.hemi.intensity = 1.1 * (1 - 0.6 * n) * (1 - 0.25 * s);
     this.hemi.color.lerp(new THREE.Color('#5a7ac8'), 0.7 * n);
     this.skyUniforms.uTop.value.lerp(dark, 0.88 * n).lerp(st, 0.8 * s);
-    this.skyUniforms.uHorizon.value.lerp(new THREE.Color('#1c2140'), 0.82 * n).lerp(st, 0.9 * s);
+    this.skyUniforms.uHorizon.value.lerp(new THREE.Color(this.style?.night?.[1] || '#1c2140'), 0.82 * n).lerp(st, 0.9 * s);
     this.skyUniforms.uSun.value.multiplyScalar(Math.max(0, 1 - 1.15 * n));
     this.scene.fog.color.copy(this.skyUniforms.uHorizon.value).lerp(st.clone().multiplyScalar(1 - 0.75 * n), s);
     this.scene.fog.density = this.scene.fog.density * (1 + 0.5 * n) + s * 0.07;
@@ -576,6 +578,16 @@ export class World {
     this.groundUniforms.uDry.value.copy(new THREE.Color(a.ground[0]).lerp(new THREE.Color(gB.ground[0]), t));
     this.groundUniforms.uDry2.value.copy(new THREE.Color(a.ground[1]).lerp(new THREE.Color(gB.ground[1]), t)).multiplyScalar(0.9);
     this.groundUniforms.uLush.value.set('#4f9a3e');
+    const SY = this.style;
+    if (SY) {   // живость планеты 0..1 по стадии: от «мёртвого» набора цветов стиля к «живому»
+      const live = clamp01((k + t) / Math.max(1, st.length - 1)), C = (x, y) => new THREE.Color(x).lerp(new THREE.Color(y || x), live);
+      this.skyUniforms.uTop.value.copy(C(SY.sky[0], SY.sky_live?.[0])); this.skyUniforms.uHorizon.value.copy(C(SY.sky[1], SY.sky_live?.[1])).lerp(C(SY.fog, SY.fog_live), 0.5);
+      this.skyUniforms.uSun.value.set(SY.sun || '#ffffff'); this.sun.color.set(SY.sun || '#ffffff');
+      this.scene.fog.color.copy(this.skyUniforms.uHorizon.value);
+      this.hemi.color.copy(C(SY.sky[0], SY.sky_live?.[0])).lerp(new THREE.Color('#ffffff'), 0.5); this.hemi.groundColor.copy(new THREE.Color(SY.ground[0])).multiplyScalar(0.6);
+      this.groundUniforms.uDry.value.copy(C(SY.ground[0], SY.ground_live?.[0])); this.groundUniforms.uDry2.value.copy(C(SY.ground[1], SY.ground_live?.[1])).multiplyScalar(0.9);
+      this.groundUniforms.uLush.value.set(SY.lush || '#4f9a3e');
+    }
     this.flora = num('flora');
     this.groundUniforms.uFlora.value = this.flora;
     // Вода: каждая лощина наполняется по своей глубине

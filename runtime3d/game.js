@@ -6,6 +6,7 @@ import { Explore } from './explore.js';
 import { Builder } from './build.js';
 import { Interiors } from './interior.js';
 import { Blockout } from './blockout.js';
+import { Shop } from './shop.js';
 import { VehicleBody, rigWheels, animWheels } from './vehicle.js';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -178,6 +179,7 @@ export class Game {
     this.explore.populate();
     this.blockout.build();
     this.builder.populate();
+    this.shop = new Shop(this); this.shop.applyAll();
     for (const p of this.state.house) if (this.builder.P[p.id]?.store) this.storages.push(this.builder.storageOf(p));
   }
 
@@ -380,8 +382,9 @@ export class Game {
   // У фабрикатора крафт берёт ресурсы и из ящиков базы (в радиусе 12 м от него)
   baseStashes() { const w = this.workbench; return this.nearBench && w ? this.storages.filter(s => Math.hypot(s.x - w.x, s.z - w.z) < 12).map(s => this.stashOf(s)) : []; }
   haveAll(k) { return (this.state.inv[k] || 0) + this.baseStashes().reduce((a, S) => a + (S[k] || 0), 0); }
-  has(cost) { return Object.entries(cost).every(([k, v]) => this.haveAll(k) >= v); }
+  has(cost) { return this.creative || Object.entries(cost).every(([k, v]) => this.haveAll(k) >= v); }
   take(cost) {
+    if (this.creative) return true;   // креатив: стройка и крафт бесплатно
     if (!this.has(cost)) return false;
     const bags = [this.state.inv, ...this.baseStashes()];
     for (const [k, v] of Object.entries(cost)) { let need = v; for (const B of bags) { const t = Math.min(need, B[k] || 0); if (t) { B[k] -= t; need -= t; if (B[k] <= 0) delete B[k]; } if (!need) break; } }
@@ -436,6 +439,7 @@ export class Game {
   // ---------- Крафт и постройка ----------
   recipeState(r) {
     const ti = this.ti(), L = this.life?.L;
+    if (this.creative) { const built = r.once && (this.state.buildings.some(b => b.recipe === r.id) || (r.build === '__dome' && (this.state.baseDome || this.state.domeKit))); return { locked: !!built, why: built ? 'уже построено' : '', affordable: !built }; }
     let locked = !!(r.unlock_ti && ti < r.unlock_ti), why = locked ? `Ti ${r.unlock_ti}` : '';
     if (r.unlock_life != null && (!L?.started || L.stage < r.unlock_life)) { locked = true; why = L?.started ? `эпоха «${this.cfg.evolution.stages[r.unlock_life].name}»` : 'зарождение жизни'; }
     if (r.needs_bp && !(this.state.bps?.[r.needs_bp] >= 1)) { locked = true; why = 'нужен чертёж'; }
@@ -544,9 +548,10 @@ export class Game {
     if (g.bless_sec) this.life.L.bless = Math.max(Date.now(), this.life.L.bless || 0) + g.bless_sec * 1000;
     if (g.boost_ti_sec) this.state.boosts.ti = Math.max(Date.now(), this.state.boosts.ti || 0) + g.boost_ti_sec * 1000;
     if (p.once) this.state.flags['bought_' + id] = true;
+    this.shop?.grant(p);   // + реклама отключается за любую покупку
     if (g.flags?.includes('suit_gold')) this.applySuit();
     this.save();
-    this.ui.toast('Покупка: ' + p.title);
+    this.ui.toast('Покупка: ' + p.title, 'rar-legend');
     return true;
   }
   applySuit() {
@@ -683,7 +688,7 @@ export class Game {
     // Исследование: метеориты, сутки, буря, обломки
     if (!this.driving && this.vehicles?.length) this.updateVehicles(dt);   // припаркованные — тоже физика (пока не уснут)
     this.explore.update(dt);
-    this.interiors.update(dt); this.blockout.update?.(dt);
+    this.interiors.update(dt); this.blockout.update?.(dt); this.shop?.update(dt);
     this.builder.update(dt);
     this.nearMeteor = !!this.explore.nearM;
     // Жизнь

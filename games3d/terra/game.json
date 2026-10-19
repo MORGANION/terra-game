@@ -1946,7 +1946,7 @@
     }
   ],
   "monetization": {
-    "_comment": "Где реклама и что продаём. Рантайм показывает кнопки в нужный момент.",
+    "_comment": "Продаём только косметику и контент. Любая покупка отключает межстраничную рекламу (flag no_ads).",
     "rewarded": {
       "revive_keep": {
         "label": "Очнуться с вещами",
@@ -2001,6 +2001,157 @@
     },
     "iap": [
       {
+        "id": "bundle_ice",
+        "kind": "bundle",
+        "title": "Ледяной первопроходец",
+        "sub": "Марсоход, скафандр и база в одной ледяной теме",
+        "price": "479 ₽",
+        "was": "1 290 ₽",
+        "badge": "НОВЫЙ",
+        "img": "shop/bundle_ice.jpg",
+        "accent": "#6cc8ff",
+        "once": true,
+        "items": [
+          [
+            "rover",
+            "Марсоход «Айсберг»",
+            "скин + чертёж марсохода"
+          ],
+          [
+            "suit",
+            "Скафандр «Иней»",
+            "бело-голубой, светящийся визор"
+          ],
+          [
+            "module",
+            "Скины модулей",
+            "купола и модули базы"
+          ],
+          [
+            "block",
+            "Цельный модуль «Станция»",
+            "придёт обновлением, бесплатно"
+          ]
+        ],
+        "grant": {
+          "flags": [
+            "theme_ice"
+          ],
+          "bps": [
+            "rover"
+          ],
+          "theme": "ice"
+        }
+      },
+      {
+        "id": "bundle_lava",
+        "kind": "bundle",
+        "title": "Кузница вулкана",
+        "sub": "Чёрный базальт и светящиеся оранжевые швы",
+        "price": "399 ₽",
+        "was": "1 090 ₽",
+        "badge": "ХИТ",
+        "img": "shop/bundle_lava.jpg",
+        "accent": "#ff8a3d",
+        "once": true,
+        "items": [
+          [
+            "rover",
+            "Марсоход «Магма»",
+            "скин + чертёж марсохода"
+          ],
+          [
+            "suit",
+            "Скафандр «Обсидиан»",
+            "чёрный с оранжевым"
+          ],
+          [
+            "module",
+            "Скины модулей",
+            "купола и модули базы"
+          ],
+          [
+            "block",
+            "Цельный модуль «Кузница»",
+            "придёт обновлением, бесплатно"
+          ]
+        ],
+        "grant": {
+          "flags": [
+            "theme_lava"
+          ],
+          "bps": [
+            "rover"
+          ],
+          "theme": "lava"
+        }
+      },
+      {
+        "id": "style_jungle",
+        "kind": "style",
+        "title": "Сияющий лес",
+        "sub": "Фиолетовый грунт, бирюзовая вода, розовое небо, ночь с сиянием",
+        "price": "249 ₽",
+        "img": "shop/style_jungle.jpg",
+        "accent": "#b78cff",
+        "once": true,
+        "grant": {
+          "flags": [
+            "style_jungle"
+          ],
+          "style": "jungle"
+        }
+      },
+      {
+        "id": "style_candy",
+        "kind": "style",
+        "title": "Зефирные дюны",
+        "sub": "Пастельные дюны, мятные оазисы, лавандовое небо",
+        "price": "249 ₽",
+        "img": "shop/style_candy.jpg",
+        "accent": "#ff7aa8",
+        "once": true,
+        "grant": {
+          "flags": [
+            "style_candy"
+          ],
+          "style": "candy"
+        }
+      },
+      {
+        "id": "creative",
+        "kind": "creative",
+        "title": "Креатив-режим",
+        "sub": "Переключатель в любой момент",
+        "price": "299 ₽",
+        "img": "shop/creative.jpg",
+        "accent": "#ffcf4a",
+        "once": true,
+        "items": [
+          [
+            "inf",
+            "Бесконечные ресурсы",
+            "крафт и стройка ничего не тратят"
+          ],
+          [
+            "jet",
+            "Джетпак без ограничений",
+            "летай куда угодно"
+          ],
+          [
+            "build",
+            "Стройка без ограничений",
+            "все рецепты открыты"
+          ]
+        ],
+        "grant": {
+          "flags": [
+            "creative"
+          ],
+          "creative": true
+        }
+      },
+      {
         "id": "big_backpack",
         "title": "Большой рюкзак",
         "desc": "+4 слота к любому рюкзаку",
@@ -2010,10 +2161,13 @@
           "flags": [
             "big_backpack"
           ]
-        }
+        },
+        "kind": "extra",
+        "img": null
       },
       {
         "id": "no_ads",
+        "kind": "extra",
         "title": "Без рекламы",
         "desc": "Без межстраничной рекламы навсегда",
         "price": "199 ₽",
@@ -2037,7 +2191,8 @@
             "rare_next"
           ]
         },
-        "life": true
+        "life": true,
+        "kind": "life"
       },
       {
         "id": "auto_feeder",
@@ -2050,7 +2205,8 @@
             "auto_feeder"
           ]
         },
-        "life": true
+        "life": true,
+        "kind": "life"
       },
       {
         "id": "bless_day",
@@ -2060,7 +2216,8 @@
         "grant": {
           "bless_sec": 86400
         },
-        "life": true
+        "life": true,
+        "kind": "life"
       },
       {
         "id": "outfits",
@@ -2073,27 +2230,114 @@
             "outfits"
           ]
         },
-        "life": true
+        "life": true,
+        "kind": "life"
       }
     ],
     "soon": [
       {
-        "title": "Скины марсохода",
-        "desc": "раскраски и обвесы для марсохода"
+        "title": "Кристальный каньон",
+        "desc": "новая локация: кристаллы-небоскрёбы, пещера с тайниками",
+        "img": "shop/location.jpg"
       },
       {
-        "title": "Облики астронавта",
-        "desc": "новые скафандры"
-      },
-      {
-        "title": "Стили планеты",
-        "desc": "другие оттенки неба, грунта и льда"
-      },
-      {
-        "title": "Новые локации",
-        "desc": "дальние регионы для вылазок"
+        "title": "Следующий набор",
+        "desc": "тема выберется голосованием игроков"
       }
-    ]
+    ],
+    "themes": {
+      "default": {
+        "name": "Стандарт"
+      },
+      "ice": {
+        "name": "Лёд",
+        "suit": "#6cc0ff",
+        "rover": "#6cc0ff",
+        "hull": "#e4f3ff",
+        "trim": "#35b6ff",
+        "stripe": "#1f78c8",
+        "roof": "#3a95e0",
+        "glow": "#7fe8ff"
+      },
+      "lava": {
+        "name": "Лава",
+        "suit": "#4a4648",
+        "rover": "#4a4648",
+        "hull": "#3b3532",
+        "trim": "#ff6a1a",
+        "stripe": "#ff4a10",
+        "roof": "#2a2422",
+        "glow": "#ff8a2a"
+      }
+    },
+    "styles": {
+      "classic": {
+        "name": "Красная планета",
+        "img": "shop/style_classic.jpg"
+      },
+      "jungle": {
+        "name": "Сияющий лес",
+        "ground": [
+          "#7a5aa8",
+          "#4a3470"
+        ],
+        "ground_live": [
+          "#5a4a90",
+          "#2f6f7a"
+        ],
+        "lush": "#3fd0b0",
+        "water": "#3fe0d0",
+        "sky": [
+          "#3a1f5a",
+          "#e08ab8"
+        ],
+        "sky_live": [
+          "#7a5ad8",
+          "#f5b0d8"
+        ],
+        "fog": "#c08ac8",
+        "fog_live": "#d0a8e8",
+        "sun": "#ffd0f0",
+        "night": [
+          "#140a30",
+          "#3a1a5c"
+        ],
+        "rock": "#8a6ab8",
+        "flora": "#5fe0c8",
+        "crystal": "#ff9ae0"
+      },
+      "candy": {
+        "name": "Зефирные дюны",
+        "ground": [
+          "#f0b8c4",
+          "#d08aa0"
+        ],
+        "ground_live": [
+          "#f3c8d0",
+          "#c8a0c8"
+        ],
+        "lush": "#7fe0b0",
+        "water": "#7fd8e8",
+        "sky": [
+          "#b08ad8",
+          "#f8c8d8"
+        ],
+        "sky_live": [
+          "#a8a0f0",
+          "#fbe0ec"
+        ],
+        "fog": "#f0c0d4",
+        "fog_live": "#f4d8e8",
+        "sun": "#fff0f4",
+        "night": [
+          "#2a1f4c",
+          "#5a3a70"
+        ],
+        "rock": "#f0c8d8",
+        "flora": "#9ff0c8",
+        "crystal": "#c8a8ff"
+      }
+    }
   },
   "texts": {
     "o2": "O₂",

@@ -261,7 +261,7 @@ export class Player {
     const JM = this.jetFuelMax || 0, JH = this.cfg.jet_height || 3;
     if (this.grounded) { this.baseY = this.pos.y; this.jetFuel = Math.min(JM, (this.jetFuel ?? JM) + dt * Math.max(1, JM)); }
     else if (this.baseY == null) this.baseY = this.pos.y;
-    const free = !!this.devJet;   // дев: без потолка и без расхода топлива
+    const free = !!this.devJet || !!this.creativeJet;   // дев/креатив: без потолка и без расхода топлива
     const ceilY = free ? Infinity : (this.baseY ?? this.pos.y) + JH;
     this.jetting = !this.grounded && (JM > 0 || free) && (inp.keys.Space || inp.jetHeld) && (this.jetFuel > 0 || free);
     if (this.jetting) {
@@ -273,7 +273,7 @@ export class Player {
       this.vel.y += (want - this.vel.y) * Math.min(1, dt * 8) + this.cfg.gravity * dt;
     }
     if (!this.jetting) this.gliding = false;
-    { const G = (this.devJet ? 26 : 14) * (this.gliding ? 1 : 0), dir = amt > 0.05 ? wish : fwd;
+    { const G = (this.devJet || this.creativeJet ? 26 : 14) * (this.gliding ? 1 : 0), dir = amt > 0.05 ? wish : fwd;
       this.glideV ||= new THREE.Vector3();
       if (this.gliding) { this.glideV.lerp(dir.clone().setY(0).normalize().multiplyScalar(G), Math.min(1, dt * 2.5)); this.facing = Math.atan2(this.glideV.x, this.glideV.z); }
       else this.glideV.multiplyScalar(this.grounded ? 0 : Math.max(0, 1 - dt * 1.5));

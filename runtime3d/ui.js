@@ -276,7 +276,8 @@ export class UI {
     if (name === 'inv') this.g.qa.event('gear_open', {});
     const body = this.el('pbody');
     if (!this.scrollHooked) { this.scrollHooked = true; const mark = () => { this.scrolling = performance.now(); }; for (const ev of ['wheel', 'scroll', 'touchmove', 'pointerdown']) body.addEventListener(ev, mark, { passive: true }); }
-    if (this.panel !== name) body.scrollTop = 0;
+    if (this.panel !== name) { body.scrollTop = 0; this.storeSel = null; }
+    body.classList.toggle('shopv', name === 'store'); this.el('panel').classList.toggle('wide', name === 'store');
     this.panel = name;
     this.el('panel').style.display = 'flex';
     const [i, t, c] = { dev: [ic('settings'), 'Дев-панель', 'var(--pink)'], daily: [ic('gift'), 'Награды за вход', 'var(--gold)'], craft: [ic('craft'), this.g.state?.baseDome ? this.T.craft : 'Сборка'], inv: [icc('g-suit'), 'Снаряжение', 'var(--sky)'], store: [ic('store'), this.T.store, 'var(--mint)'], life: [ic('paw'), 'Род фенеков', 'var(--mint)'], settings: [ic('settings'), 'Настройки · пауза', 'var(--cocoa-3)'], stash: [ic('crate'), this.g.nearStash?.name || 'Ящик', 'var(--sand)'], house: [ic('house'), 'Стройка', 'var(--sand)'] }[name];
@@ -475,22 +476,7 @@ export class UI {
     g.player.emoteOnce?.('cheer', 1.6);
   }
   flash(color) { const f = this.el('flash'); f.style.background = `radial-gradient(circle, ${color}cc 0%, ${color}00 70%)`; f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
-  renderStore() {
-    const g = this.g, body = this.el('pbody');
-    body.innerHTML = g.life.L.started ? `<div class="balance"><span>${ic('crystal')} Кристаллы</span><b>${Math.floor(g.life.L.crystals)}</b></div>` : '';
-    for (const p of g.M.iap) {
-      if (p.life && !g.life.L.started) continue;
-      const owned = p.once && g.state.flags['bought_' + p.id];
-      const row = document.createElement('div'); row.className = 'row' + (p.best ? ' best' : '');
-      row.innerHTML = `<div class="rname">${p.best ? '<b class="tag">ХИТ</b> ' : ''}${p.title}<span class="desc">${p.desc}</span></div>`;
-      row.append(this.sbtn('iap_' + p.id, owned ? ic('check') : p.price, 'buy', async () => { if (await g.buy(p.id)) this.renderStore(); }, owned));
-      body.append(row);
-    }
-    // Ресурсы за деньги не продаём — только то, что интересно: облики, локации, стили планеты
-    const soon = g.M.soon || [];
-    if (soon.length) { body.append(Object.assign(document.createElement('div'), { className: 'note sec', innerHTML: `<span class="secno">${ic('star')}</span>Скоро` }));
-      for (const t of soon) body.append(Object.assign(document.createElement('div'), { className: 'row soon', innerHTML: `<div class="rname">${t.title}<span class="desc">${t.desc || ''}</span></div><span class="tag">скоро</span>` })); }
-  }
+  renderStore() { this.g.shop.render(this); }
   // Сундук: две сетки (рюкзак ↔ ящик). Перетаскивание или тап — переложить стопку; «Сложить всё» — ресурсы в ящик.
   renderStash() {
     const g = this.g, st = this.stashSt || g.nearStash, body = this.el('pbody'); if (!st) return this.close();
@@ -596,6 +582,15 @@ export class UI {
     else { pv.style.left = (P.left / z + (P.width / z - wpv) / 2) + 'px'; pv.style.top = (P.top / z + 56) + 'px'; } // узкий экран — по центру окна, под заголовком
     if (d.preview) this.g.previewModel?.(pv.querySelector('canvas'), d.preview === 'skin' && d.skin?.startsWith('skin_') ? d.skin : d.preview);
   }
+  // Купленные темы снаряжения и стили планеты — переключатели в настройках
+  themesHtml() {
+    const sh = this.g.shop; if (!sh) return ''; const M = sh.M, S = this.g.state;
+    const th = Object.keys(M.themes || {}).filter(k => sh.hasTheme(k)), st = Object.keys(M.styles || {}).filter(k => sh.hasStyle(k));
+    let h = '';
+    if (th.length > 1) h += `<div class="note sec"><span class="secno">${ic('suit')}</span>Тема снаряжения</div><div class="dbtns">` + th.map(k => `<button class="btn ${S.theme === k ? 'ok' : 'sec'}" data-theme="${k}" ${S.theme === k ? 'disabled' : ''}>${M.themes[k].name}${S.theme === k ? ' ✓' : ''}</button>`).join('') + `</div>`;
+    if (st.length > 1) h += `<div class="note sec"><span class="secno">${ic('star')}</span>Стиль планеты</div><div class="dbtns">` + st.map(k => `<button class="btn ${S.style === k ? 'ok' : 'sec'}" data-style="${k}" ${S.style === k ? 'disabled' : ''}>${M.styles[k].name}${S.style === k ? ' ✓' : ''}</button>`).join('') + `</div>`;
+    return h;
+  }
   skinsHtml() {
     const g = this.g; if (!g.skins) return '';
     const own = g.skins.owned(), cur = g.skins.cur(), names = { hero: 'Стандартный', ...Object.fromEntries(Object.entries(g.cfg.skins || {}).map(([k, v]) => [k, v.name])) };
@@ -614,6 +609,8 @@ export class UI {
       + `<div class="note sec"><span class="secno">${ic('lang')}</span>Язык</div>`
       + `<div class="set">${ic('lang')}<label for="s_lang">Язык</label><select id="s_lang"><option value="ru">Русский</option><option value="en">English (скоро)</option><option value="tr">Türkçe (скоро)</option></select></div>`
       + `<div class="note">Переводы появятся в следующих версиях — настройки уже сохраняются.</div>`
+      + (this.g.shop?.creativeOwned ? `<div class="note sec"><span class="secno">${ic('star')}</span>Креатив-режим</div><div class="dbtns"><button class="btn ${this.g.creative ? 'ok' : 'sec'}" id="b_creative">${this.g.creative ? 'Креатив включён · выключить' : 'Включить креатив'}</button></div><div class="note">Бесконечные ресурсы, джетпак и стройка без ограничений.</div>` : '')
+      + this.themesHtml()
       + this.skinsHtml()
       + `<div class="note sec"><span class="secno">${ic('timer')}</span>Сохранение</div><div class="dbtns"><button class="btn bad" id="b_restart">Начать заново</button></div>`;
     const save = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch {} dispatchEvent(new CustomEvent('terra-settings', { detail: S })); };
@@ -623,6 +620,9 @@ export class UI {
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) inp.addEventListener(ev, e => e.stopPropagation(), { passive: true });
     }
     body.querySelectorAll('[data-skin]').forEach(b => b.onclick = async e => { e.stopPropagation(); b.disabled = true; await this.g.skins?.wear(b.dataset.skin); this.renderSettings(); });
+    body.querySelector('#b_creative')?.addEventListener('click', e => { e.stopPropagation(); this.g.shop.setCreative(!this.g.creative); this.renderSettings(); });
+    body.querySelectorAll('[data-theme]').forEach(b => b.onclick = e => { e.stopPropagation(); this.g.shop.setTheme(b.dataset.theme); this.renderSettings(); });
+    body.querySelectorAll('[data-style]').forEach(b => b.onclick = e => { e.stopPropagation(); this.g.shop.setStyle(b.dataset.style); this.renderSettings(); });
     body.querySelector('#b_unstuck').onclick = e => { e.stopPropagation(); const r = this.g.unstuck(); this.close(); this.toast(r === 'rover' ? 'Марсоход вытащен на ровное место' : 'Перенесли на безопасное место'); };
     body.querySelector('#b_restart').onclick = async e => { e.stopPropagation(); this.close();
       const id = await this.dialog(`<h2>Начать заново?</h2><p>Весь прогресс планеты, постройки, снаряжение и Род будут удалены. Это нельзя отменить.</p>`, [['rs_no', 'Отмена', 'sec'], ['rs_yes', 'Удалить и начать', 'bad']]);
