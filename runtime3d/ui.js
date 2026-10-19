@@ -62,7 +62,7 @@ export class UI {
       btn('rot', '⟳' + kbd('R'), 'mid', () => g.builder.rotate()),
       btn('unbuild', ic('pick') + '<small>Разобрать</small>' + kbd('X'), 'mid bad', () => g.builder.removeNear()),
       btn('meteor', ic('meteor') + '<small>Ядро</small><i class="adb">' + ic('ad') + '</i>', 'big ad', () => g.openMeteor()),
-      btn('loot', ic('crate') + `<small>${this.T.open}</small>` + kbd('E'), 'big ok', () => g.explore.nearC && g.explore.openContainer(g.explore.nearC)),
+      btn('loot', ic('crate') + `<small>${this.T.open}</small>` + kbd('E'), 'big ok', () => g.interiors?.nearV ? g.interiors.use(g.interiors.nearV) : g.explore.nearC && g.explore.openContainer(g.explore.nearC)),
       btn('lamp', icc('r-lamp') + kbd('F'), 'mid', () => g.explore.placeLamp()),
       btn('pet', ic('pet') + `<small>${this.T.pet}</small>` + kbd('E'), 'big pink', () => g.life.nearest && g.life.pet(g.life.nearest)),
       btn('fill', icc('r-berries') + `<small>${this.T.fill}</small>` + kbd('E'), 'big', () => g.life.fillFeeder()),
@@ -101,7 +101,7 @@ export class UI {
       // Игровые клавиши (прыжок/ходьба стрелками) не должны листать открытую панель браузером
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.code) && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) e.preventDefault();
       if (e.code === 'KeyE' && !g.placing && (g.driving || g.nearVehicle())) { g.toggleDrive(); return; }
-      if (e.code === 'KeyE') { if (g.placing) { if (!g.confirmPlace() && !g.placing?.builder) this.toast('Здесь нельзя: ' + (g.placeWhy || 'нужно ровное место'), 'warn'); } else if (g.nearFeeder && g.life.foodCap() && g.life.L.food < g.life.foodCap() - 1) g.life.fillFeeder(); else if (g.life.nearest && g.life.petReady(g.life.nearest) && !g.target) g.life.pet(g.life.nearest); else if (g.explore.nearC) g.explore.openContainer(g.explore.nearC); else if (g.nearMeteor) g.openMeteor(); else if (g.nearStash) { if (this.panel !== 'stash') this.stashSt = g.nearStash; this.toggle('stash'); } else if (g.target) g.startMine(g.target); }
+      if (e.code === 'KeyE') { if (g.placing) { if (!g.confirmPlace() && !g.placing?.builder) this.toast('Здесь нельзя: ' + (g.placeWhy || 'нужно ровное место'), 'warn'); } else if (g.nearFeeder && g.life.foodCap() && g.life.L.food < g.life.foodCap() - 1) g.life.fillFeeder(); else if (g.life.nearest && g.life.petReady(g.life.nearest) && !g.target) g.life.pet(g.life.nearest); else if (g.interiors?.nearV) g.interiors.use(g.interiors.nearV); else if (g.explore.nearC) g.explore.openContainer(g.explore.nearC); else if (g.nearMeteor) g.openMeteor(); else if (g.nearStash) { if (this.panel !== 'stash') this.stashSt = g.nearStash; this.toggle('stash'); } else if (g.target) g.startMine(g.target); }
       if (e.code === 'KeyF' && !this.panel) g.explore.placeLamp();
       if (e.code === 'KeyQ' && (g.state.inv.o2_tank || 0) > 0) g.use('o2_tank');
       if (e.code === 'KeyG' || e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); this.toggle('inv'); }
@@ -116,6 +116,25 @@ export class UI {
     });
   }
   toggle(name) { this.panel === name ? this.close() : this.open(name); }
+  // Что строить/крафтить по текущей цели: {panel:'craft'|'house', id, name}. Явно — G.target, иначе из done_if.built / done_if.modules
+  goalTarget() {
+    const g = this.g, G = g.goal?.(); if (!G) return null;
+    const rc = id => g.cfg.recipes.find(r => r.id === id), bp = id => g.cfg.build_pieces.find(p => p.id === id);
+    const id = G.target || G.done_if?.built || (G.done_if?.modules ? (g.cfg.build_pieces.find(p => p.kind === 'module') || {}).id : null);
+    if (!id) return null;
+    if (bp(id) && !bp(id).recipe) return { panel: 'house', id, name: bp(id).name };
+    const r = rc(id) || rc(bp(id)?.recipe); if (!r) return null;
+    return { panel: 'craft', id: r.id, name: r.name || g.cfg.items[r.out]?.name || r.id };
+  }
+  // Плашка «задание» вверху панели + прокрутка к подсвеченной карточке
+  goalNote(body, here) {
+    const t = this.goalTarget(); if (!t) return;
+    const n = document.createElement('div'); n.className = 'note goalnote'; n.id = 'goalnote';
+    if (t.panel === here) n.innerHTML = `${ic('star')} <b>Задание:</b> ${this.g.goal().text} — нужная карточка «${t.name}» подсвечена ниже`;
+    else { n.innerHTML = `${ic('star')} <b>Задание:</b> «${t.name}» — в меню «${t.panel === 'craft' ? 'Крафт' : 'Стройка'}» ${kbd(t.panel === 'craft' ? 'C' : 'B')}`; n.append(this.sbtn('goal_go', 'Открыть', 'ok', () => this.open(t.panel))); }
+    body.prepend(n);
+  }
+  scrollToGoal() { const r = this.el('pbody').querySelector('.goalrow'); if (r) r.scrollIntoView({ block: 'center' }); }
 
   // ---------- HUD каждый кадр ----------
   update() {
@@ -141,6 +160,13 @@ export class UI {
     else if (late) set('o2eta', `<span class="warn">не успеешь!</span> ${ic('dome')} <b>${Math.ceil(info.home)}с</b>`);
     else set('o2eta', `${ic('dome')} ${g.safeZone?.lander ? 'до шаттла' : 'до купола'} <b>${Math.ceil(info.home)}с</b>${risky ? ' <span class="warn">пора назад</span>' : ''}`);
     this.el('o2eta').classList.toggle('risky', risky);
+    // Компас: полоса сверху, метки регионов (иконка + метры), N/E/S/W
+    if (this.g.cfg.ui?.compass) { const C = this.compass ||= (() => { const d = document.createElement('div'); d.id = 'compass'; this.el('ui').append(d); return d; })();
+      const y = g.player.yaw, pp2 = g.player.pos, fov = 1.9, items = [];
+      const put = (ang, html, cls = '') => { let a = Math.atan2(Math.sin(ang - y), Math.cos(ang - y)); a = -a; if (Math.abs(a) > fov / 2) return; items.push(`<i class="cmk ${cls}" style="left:${50 + a / fov * 100}%">${html}</i>`); };
+      [['С', Math.PI], ['В', -Math.PI / 2], ['Ю', 0], ['З', Math.PI / 2]].forEach(([t, a]) => put(a, t, 'card'));
+      for (const L of g.explore?.landmarks || []) { const dx = L.x - pp2.x, dz = L.z - pp2.z, d = Math.hypot(dx, dz); if (d < 12) continue; put(Math.atan2(-dx, -dz), `${ic('star')}<small>${d > 999 ? (d / 1000).toFixed(1) + 'км' : Math.round(d) + 'м'}</small>`, g.state.looted?.['lm:' + L.id] ? 'done' : ''); }
+      const h = items.join(''); if (h !== this._cmp) { this._cmp = h; C.innerHTML = h; } }
     // Стрелка к куполу — когда пора возвращаться
     const sz = g.safeZone, pp = g.player.pos;
     if (sz && risky) { const dx = sz.x - pp.x, dz = sz.z - pp.z, y = g.player.yaw, f = -dx * Math.sin(y) - dz * Math.cos(y), r = dx * Math.cos(y) - dz * Math.sin(y); this.el('homearrow').style.cssText = `display:block;transform:translate(-50%,-50%) rotate(${Math.atan2(r, f)}rad)`; }
@@ -186,7 +212,7 @@ export class UI {
     const pl = g.player.pos, nearHouse = !g.placing && s.house.some(p => { const q = p.x != null ? p : g.builder.place(p); return Math.hypot(q.x - pl.x, q.z - pl.z) < 2.4; });
     vis('unbuild', nearHouse && !g.target && !X.nearC && !g.nearStash);
     vis('meteor', !g.placing && g.nearMeteor);
-    vis('loot', !g.placing && !!X.nearC && !this.lootOpen);
+    vis('loot', !g.placing && (!!X.nearC || !!g.interiors?.nearV) && !this.lootOpen);
     vis('stash', !g.placing && !!g.nearStash && !X.nearC);
     if (this.panel === 'stash' && (!this.stashSt || Math.hypot(this.stashSt.x - g.player.pos.x, this.stashSt.z - g.player.pos.z) > 3.6)) this.close();
     this.worldTag();
@@ -204,7 +230,8 @@ export class UI {
     const gate = g.player.blockedBy || cave || g.world.gateObjects.find(q => !q.open && q.ring && Math.abs(Math.hypot(PP.x - q.ring.x, PP.z - q.ring.z) - q.ring.r) < 16) || g.world.gateObjects.find(q => !q.open && q.storm && Math.hypot(PP.x - q.zone.x, PP.z - q.zone.z) < q.zone.r + 18);
     const extra = gate?.cave ? `${icc('r-ice')} Тысячелетний лёд. Растает при ${ic('heat')} ${gate.zone.gate.value} (сейчас ${s.stats.heat.toFixed(0)})`
       : X.darkName && !(s.inv.lamp > 0) && !s.lamps.some(l => Math.hypot(l.x - g.player.pos.x, l.z - g.player.pos.z) < 12) ? `${icc('r-lamp')} ${X.darkName}: темно. Ставь фонари${kbd('F')}` : X.stormOn ? `${icc('g-storm')} Буря: плохая видимость, кислород тратится быстрее` : '';
-    set('hint', extra || (gate ? `${ic(gate.zone.gate.stat === 'heat' ? 'heat' : 'storm')} ${gate.zone.gate.stat === 'heat' ? this.T.gate_ice : this.T.gate_storm} (${g.T.stats[gate.zone.gate.stat].name}: ${s.stats[gate.zone.gate.stat].toFixed(0)}/${gate.zone.gate.value})`
+    this.zoneTip(gate);
+    set('hint', (gate?.cave ? '' : extra) || (gate ? ''
       : g.nearBench && !this.panel ? `${ic('craft')} Фабрикатор рядом — крафт и улучшения${kbd('C')}` : s.craftQueue.length ? `${ic('timer')} ` + s.craftQueue.map(j => `${(g.cfg.recipes.find(r => r.id === j.id) || {}).name || g.cfg.items[j.id]?.name || j.id} ${Math.max(0, Math.ceil(j.end - g.time))}с`).join(', ') : ''));
     // --- Род
     const life = g.life, L = life.L;
@@ -255,6 +282,7 @@ export class UI {
     const [i, t, c] = { dev: [ic('settings'), 'Дев-панель', 'var(--pink)'], daily: [ic('gift'), 'Награды за вход', 'var(--gold)'], craft: [ic('craft'), this.g.state?.baseDome ? this.T.craft : 'Сборка'], inv: [icc('g-suit'), 'Снаряжение', 'var(--sky)'], store: [ic('store'), this.T.store, 'var(--mint)'], life: [ic('paw'), 'Род фенеков', 'var(--mint)'], settings: [ic('settings'), 'Настройки · пауза', 'var(--cocoa-3)'], stash: [ic('crate'), this.g.nearStash?.name || 'Ящик', 'var(--sand)'], house: [ic('house'), 'Стройка', 'var(--sand)'] }[name];
     this.el('ptitle').innerHTML = `<i class="ico" style="${c ? '--c:' + c : ''}">${i}</i>${t}`;
     ({ craft: () => this.renderCraft(), inv: () => this.renderInv(), store: () => this.renderStore(), life: () => this.renderLife(), settings: () => this.renderSettings(), dev: () => this.renderDev(), daily: () => this.renderDaily(), stash: () => this.renderStash(), house: () => this.renderHouse() })[name]();
+    if (name === 'craft' || name === 'house') this.scrollToGoal();
     window.__qa.state = 'panel:' + name;
   }
   // Живая перерисовка панели без дёрганья: рендер в отвязанный div, в DOM меняем только изменившиеся строки.
@@ -288,8 +316,10 @@ export class UI {
     body.innerHTML = (near ? '' : `<div class="note">${ic('pin')} ${g.state.baseDome ? 'Подойди к фабрикатору в куполе, чтобы создавать предметы. Постройки можно ставить где угодно.' : 'Собери купол из секций — в нём уже стоят фабрикатор и сундук.'}</div>`);
     if (g.state.domeKit && !g.state.baseDome) { const r = document.createElement('div'); r.className = 'row'; r.innerHTML = `<div class="rname">${ic('dome')} Купол базы готов<span class="desc">выбери место и поставь</span></div>`; const b = document.createElement('button'); b.className = 'btn small ok'; b.id = 'b_place_dome'; b.innerHTML = this.T.build; b.onpointerdown = e => { e.stopPropagation(); this.close(); g.builder.start('__dome'); }; r.append(b); body.append(r); }
     // Секции по тирам: машины старших тиров не теряются среди расходников
-    const secOf = r => r.unlock_life != null || ['feeder', 'incubator'].includes(r.id) ? 9 : !r.build ? -1 : (r.tier || 0) < 2 ? 1 : r.tier;
-    const secName = { '-1': [ic('craft'), 'Предметы'], 1: ['I', 'Базовые машины'], 2: ['II', 'Нужен титан'], 3: ['III', 'Нужен уран'], 9: [ic('paw'), 'Род'] };
+    const secOf = r => r.unlock_life != null || ['feeder', 'incubator'].includes(r.id) ? 9 : r.upgrade ? 5 : !r.build ? -1 : (r.tier || 0) < 2 ? 1 : r.tier;
+    const gt = this.goalTarget(), gid = gt?.panel === 'craft' ? gt.id : null, gsec = gid && recsSec(gid);
+    function recsSec(id) { const r = g.cfg.recipes.find(x => x.id === id); return r ? secOf(r) : null; }
+    const secName = { '-1': [ic('craft'), 'Предметы'], 1: ['I', 'Базовые машины'], 2: ['II', 'Нужен титан'], 3: ['III', 'Нужен уран'], 5: [ic('rocket'), 'Улучшения техники'], 9: [ic('paw'), 'Род'] };
     const recs = [...g.cfg.recipes].filter(r => g.state.baseDome ? r.build !== '__dome' : r.build === '__dome' && !g.state.domeKit).sort((a, b) => secOf(a) - secOf(b));
     const where = k => {
       const res = g.cfg.world.resources[g.cfg.items[k]?.from]; const zid = res?.bias?.startsWith('zone:') && res.bias.slice(5);
@@ -298,31 +328,32 @@ export class UI {
       return `${itemIcon(k, g.cfg.items[k])} ${g.cfg.items[k].name}: ${z.name} (${dir}, ${Math.round(z.x)}/${Math.round(z.z)}) — ${open ? 'открыта' : `откроется при ${this.sic(z.gate.stat)} ${z.gate.value} (сейчас ${st.toFixed(1)})`}`;
     };
     let sec = null;
-    for (const r of recs) {
+    for (const r of recs) { try {
       if (secOf(r) !== sec) {
         sec = secOf(r);
         const need = { 2: ['titanium'], 3: ['uranium'] }[sec] || [], [no, nm] = secName[sec];
-        body.append(Object.assign(document.createElement('div'), { className: 'note sec', innerHTML: `<span class="secno">${no}</span>${nm}${need.map(k => `<small>${ic('pin')} ${where(k)}</small>`).join('')}` }));
+        body.append(Object.assign(document.createElement('div'), { className: 'note sec' + (sec === gsec ? ' goalsec' : ''), innerHTML: `<span class="secno">${no}</span>${nm}${sec === gsec ? `<b class="goaltag">${ic('star')} задание здесь</b>` : ''}${need.map(k => `<small>${ic('pin')} ${where(k)}</small>`).join('')}` }));
       }
       const s = g.recipeState(r);
       const job = g.state.craftQueue.find(j => j.id === r.id);
-      const name = r.build ? `${ic('build')} ${r.name || r.build}<span class="desc">${r.desc || ''}</span>` : `${itemIcon(r.out, g.cfg.items[r.out])} ${g.cfg.items[r.out].name} ×${r.count}${g.cfg.items[r.out].use ? `<span class="desc">${Object.entries(g.cfg.items[r.out].use).map(([k, v]) => `+${v} ${k === 'o2' ? 'O₂' : 'HP'}`).join(', ')}</span>` : ''}`;
+      const name = r.build || !r.out ? `${ic(r.build ? 'build' : 'rocket')} ${r.name || r.build}<span class="desc">${r.desc || ''}</span>` : `${itemIcon(r.out, g.cfg.items[r.out])} ${g.cfg.items[r.out].name} ×${r.count}${g.cfg.items[r.out].use ? `<span class="desc">${Object.entries(g.cfg.items[r.out].use).map(([k, v]) => `+${v} ${k === 'o2' ? 'O₂' : 'HP'}`).join(', ')}</span>` : ''}`;
       const gives = r.gives ? Object.entries(r.gives).map(([k, v]) => `${this.sic(k)}+${+(v * 60 * (g.T.speed || 1)).toFixed(2)}/мин`).join(' ') : '';
-      const row = document.createElement('div'); row.className = 'row' + (s.locked ? ' locked' : '');
-      row.innerHTML = `<div class="rname">${name} <small>${gives}</small></div><div class="rcost">${s.locked ? `${ic('lock')} ${s.why}` : Object.entries(g.costOf(r)).map(([k, v]) => this.itemChip(k, 0, v)).join('')}</div>`;
+      const row = document.createElement('div'); row.className = 'row' + (s.locked ? ' locked' : '') + (r.id === gid ? ' goalrow' : '');
+      row.innerHTML = `<div class="rname">${r.id === gid ? `<b class="goaltag">${ic('star')} нужно для задания</b>` : ''}${name} <small>${gives}</small></div><div class="rcost">${s.locked ? `${ic('lock')} ${s.why}` : Object.entries(g.costOf(r)).map(([k, v]) => this.itemChip(k, 0, v)).join('')}</div>`;
       const b = document.createElement('button'); b.id = 'b_craft_' + r.id; b.className = 'btn small';
       if (job) {
         const left = Math.max(0, Math.ceil(job.end - g.time));
         b.innerHTML = `${ic('timer')} ${left}с` + (left > 6 ? ` · ${ic('ad')}` : ''); b.classList.add('ad');
         b.onpointerdown = e => { e.stopPropagation(); if (left > 6) g.instantCraft(job); };
       } else {
-        b.innerHTML = r.build ? this.T.build : 'Создать';
+        b.innerHTML = r.build ? this.T.build : r.upgrade ? 'Улучшить' : 'Создать';
         b.disabled = s.locked || !s.affordable || (!r.build && !near);
         if (r.build === '__dome') b.innerHTML = 'Собрать';
         b.onpointerdown = e => { e.stopPropagation(); if (b.disabled) return; if (g.craft(r.id)) { if (r.build) this.close(); else this.renderCraft(); } };
       }
       row.append(b); body.append(row);
-    }
+    } catch (e) { (window.__qa?.errors || []).push('craft ' + r.id + ': ' + e.message); } }
+    this.goalNote(body, 'craft');
   }
   renderLife() {
     const g = this.g, life = g.life, L = life.L, E = g.cfg.evolution, body = this.el('pbody');
@@ -446,7 +477,7 @@ export class UI {
   flash(color) { const f = this.el('flash'); f.style.background = `radial-gradient(circle, ${color}cc 0%, ${color}00 70%)`; f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
   renderStore() {
     const g = this.g, body = this.el('pbody');
-    body.innerHTML = `<div class="balance"><span>${ic('crystal')} Кристаллы</span><b>${Math.floor(g.life.L.crystals)}</b></div>`;
+    body.innerHTML = g.life.L.started ? `<div class="balance"><span>${ic('crystal')} Кристаллы</span><b>${Math.floor(g.life.L.crystals)}</b></div>` : '';
     for (const p of g.M.iap) {
       if (p.life && !g.life.L.started) continue;
       const owned = p.once && g.state.flags['bought_' + p.id];
@@ -455,6 +486,10 @@ export class UI {
       row.append(this.sbtn('iap_' + p.id, owned ? ic('check') : p.price, 'buy', async () => { if (await g.buy(p.id)) this.renderStore(); }, owned));
       body.append(row);
     }
+    // Ресурсы за деньги не продаём — только то, что интересно: облики, локации, стили планеты
+    const soon = g.M.soon || [];
+    if (soon.length) { body.append(Object.assign(document.createElement('div'), { className: 'note sec', innerHTML: `<span class="secno">${ic('star')}</span>Скоро` }));
+      for (const t of soon) body.append(Object.assign(document.createElement('div'), { className: 'row soon', innerHTML: `<div class="rname">${t.title}<span class="desc">${t.desc || ''}</span></div><span class="tag">скоро</span>` })); }
   }
   // Сундук: две сетки (рюкзак ↔ ящик). Перетаскивание или тап — переложить стопку; «Сложить всё» — ресурсы в ящик.
   renderStash() {
@@ -498,21 +533,23 @@ export class UI {
     const g = this.g, body = this.el('pbody'), B = g.builder;
     if (!g.state.baseDome) { body.innerHTML = `<div class="note">${ic('pin')} Сначала поставь купол базы: Крафт (C) → «Купол базы». Потом к нему можно пристраивать модули.</div>`; if (g.state.domeKit) { const b = document.createElement('button'); b.className = 'btn ok'; b.innerHTML = 'Поставить купол'; b.onpointerdown = e => { e.stopPropagation(); this.close(); g.builder.start('__dome'); }; body.append(b); } return; }
     const kinds = { module: 'Модули', floor: 'Основа', wall: 'Стены', post: 'Опоры', deco: 'Обстановка' };
-    let h = `<div class="note"><b>Модули</b> ставятся где угодно целиком и стыкуются бок о бок — получается одно помещение. Дверь-шлюз открывается сама, внутри восполняются O₂ и здоровье. R — сторона двери.<br>${ic('jump')} Поставить — E · повернуть/другая сторона — R · разобрать с возвратом — X.</div>`;
+    const gt = this.goalTarget(), gid = gt?.panel === 'house' ? gt.id : null, gk = gid && g.cfg.build_pieces.find(p => p.id === gid)?.kind;
+    let h = `<div class="note"><b>Модули</b> пристыковываются к куполу базы (подойди к стене купола — призрак сам встанет вплотную, в стене откроется проход) и стыкуются бок о бок между собой. Дверь-шлюз открывается сама, внутри восполняются O₂ и здоровье. R — дверь наружу.<br>${ic('jump')} Поставить — E · повернуть/другая сторона — R · разобрать с возвратом — X.</div>`;
     body.innerHTML = h;
     for (const [k, title] of Object.entries(kinds)) {
       const list = g.cfg.build_pieces.filter(p => (p.kind === k) || (k === 'floor' && p.roof));
       const uniq = list.filter((p, i) => list.indexOf(p) === i && (k !== 'floor' || p.kind === 'floor'));
       if (!uniq.length) continue;
-      body.append(Object.assign(document.createElement('div'), { className: 'note sec', innerHTML: `<span class="secno">${ic(k === 'deco' ? 'star' : 'house')}</span>${title}` }));
+      body.append(Object.assign(document.createElement('div'), { className: 'note sec' + (k === gk ? ' goalsec' : ''), innerHTML: `<span class="secno">${ic(k === 'deco' ? 'star' : 'house')}</span>${title}${k === gk ? `<b class="goaltag">${ic('star')} задание здесь</b>` : ''}` }));
       for (const P of uniq) {
-        const row = document.createElement('div'); row.className = 'row' + (P.legendary ? ' best' : '');
-        row.innerHTML = `<div class="rname">${P.name}${P.store ? `<span class="desc">хранилище на ${P.store} ячеек</span>` : P.pass ? '<span class="desc">проход и шлюз — комната остаётся герметичной</span>' : P.kind === 'dome' ? '<span class="desc">большой герметичный купол со шлюзом: O₂, буря тише, внутри можно ставить фабрикатор и сундуки</span>' : P.kind === 'module' ? '<span class="desc">герметичная комната: O₂, буря тише</span>' : P.id === 'b_beacon' ? '<span class="desc">в песчаную бурю светит лучом в небо — база видна издалека</span>' : P.recipe === 'chest' ? '<span class="desc">хранилище, можно ставить внутри</span>' : P.recipe === 'workbench' ? '<span class="desc">ещё один крафт-пункт, можно ставить внутри</span>' : ''}</div><div class="rcost">${Object.entries(P.cost).map(([c, v]) => this.itemChip(c, 0, v)).join('')}</div>`;
+        const row = document.createElement('div'); row.className = 'row' + (P.legendary ? ' best' : '') + (P.id === gid ? ' goalrow' : '');
+        row.innerHTML = `<div class="rname">${P.id === gid ? `<b class="goaltag">${ic('star')} нужно для задания</b>` : ''}${P.name}${P.store ? `<span class="desc">хранилище на ${P.store} ячеек</span>` : P.pass ? '<span class="desc">проход и шлюз — комната остаётся герметичной</span>' : P.kind === 'dome' ? '<span class="desc">большой герметичный купол со шлюзом: O₂, буря тише, внутри можно ставить фабрикатор и сундуки</span>' : P.kind === 'module' ? '<span class="desc">герметичная комната: O₂, буря тише</span>' : P.id === 'b_beacon' ? '<span class="desc">в песчаную бурю светит лучом в небо — база видна издалека</span>' : P.recipe === 'chest' ? '<span class="desc">хранилище, можно ставить внутри</span>' : P.recipe === 'workbench' ? '<span class="desc">ещё один крафт-пункт, можно ставить внутри</span>' : ''}</div><div class="rcost">${Object.entries(P.cost).map(([c, v]) => this.itemChip(c, 0, v)).join('')}</div>`;
         const cost = P.recipe ? g.costOf(g.cfg.recipes.find(r => r.id === P.recipe)) : P.cost; if (P.recipe) row.querySelector('.rcost').innerHTML = Object.entries(cost).map(([c, v]) => this.itemChip(c, 0, v)).join('');
-        row.append(this.sbtn('house_' + P.id, 'Ставить', '', () => { if (B.start(P.id)) this.close(); }, !g.has(cost)));
+        row.append(this.sbtn('house_' + P.id, 'Ставить', P.id === gid ? 'ok' : '', () => { if (B.start(P.id)) this.close(); }, !g.has(cost)));
         body.append(row);
       }
     }
+    this.goalNote(body, 'house');
   }
   // ---------- Дев-панель (временная): выдать ресурсы, чертежи, награды календаря ----------
   renderDev() {
@@ -523,6 +560,9 @@ export class UI {
     row('Ресурсы на марсоход', () => { g.give?.({}) ; for (const [k, v] of Object.entries({ iron: 20, silicon: 8, titanium: 4, cobalt: 4 })) g.state.inv[k] = (g.state.inv[k] || 0) + v; }, '20 железа, 8 кремния, 4 титана, 4 кобальта');
     row('Поставить марсоход рядом', () => { const r = g.cfg.recipes.find(x => x.id === 'rover'), p = g.player.pos, f = g.player.forward(); const b = { model: 'rover', recipe: 'rover', x: +(p.x + f.x * 4).toFixed(2), z: +(p.z + f.z * 4).toFixed(2), rot: g.player.obj.rotation.y }; g.state.buildings.push(b); g.spawnBuilding(b, true); g.save(); }, 'без ресурсов, сразу перед героем');
     row('Джетпак 1 уровня', () => { const st = g.state; st.bps.jet = Math.max(st.bps.jet || 0, 1); st.gear.jet = Math.max(st.gear.jet || 0, 1); g.explore.applyGear(); g.player.jetFuel = g.player.jetFuelMax; g.save(); }, (g.state.gear?.jet || 0) >= 1 ? 'уже есть — двойной прыжок (Пробел в воздухе)' : 'чертёж + сразу надет, без ресурсов');
+    row('ТП: Кольцевая станция (блокинг)', () => { const P = g.player, x = 255 - 105, z = -250 + 20; P.pos.set(x, g.world.heightAt(x, z) + 1, z); P.vel.set(0, 0, 0); P.resetFall(3); });
+    row('ТП: Ледяная шахта (блокинг)', () => { const P = g.player, x = 292 - 26, z = -172; P.pos.set(x, g.world.heightAt(x, z) + 1, z); P.vel.set(0, 0, 0); P.resetFall(3); });
+    row('Джетпак без ограничений', () => { g.player.devJet = !g.player.devJet; g.state.devJet = g.player.devJet; g.save(); }, g.player.devJet ? 'ВКЛ — держи Пробел в воздухе: вверх без потолка, топливо бесконечно. Нажми ещё раз, чтобы выключить' : 'выкл — высота и топливо как в игре');
     row('Следующий день календаря', () => { g.daily?.dev(); }, `сейчас открыто дней: ${g.state.daily?.claimed || 0}`);
     row('Сбросить календарь', () => { g.state.daily = { claimed: 0, last: '' }; g.save(); });
     row('+50 ко всем ресурсам', () => { for (const k of ['iron', 'silicon', 'ice', 'titanium', 'cobalt']) g.state.inv[k] = (g.state.inv[k] || 0) + 50; });
@@ -567,7 +607,9 @@ export class UI {
   renderSettings() {
     const S = this.settings, body = this.el('pbody');
     const range = (id, icon, label) => `<div class="set">${ic(icon)}<label for="s_${id}">${label}</label><input type="range" id="s_${id}" min="0" max="100" step="5" value="${Math.round(S[id] * 100)}"><output>${Math.round(S[id] * 100)}%</output></div>`;
-    body.innerHTML = `<div class="note sec"><span class="secno">${ic('sound')}</span>Звук</div>`
+    const nearRover = this.g.driving || (this.g.vehicles || []).some(V => Math.hypot(V.b.x - this.g.player.pos.x, V.b.z - this.g.player.pos.z) < 40);
+    body.innerHTML = `<div class="note sec"><span class="secno">${ic('rocket')}</span>Застрял?</div><div class="dbtns"><button class="btn ok" id="b_unstuck">${ic('jump')} Вытащить из застревания</button></div><div class="note">${nearRover ? 'Марсоход рядом: поставим его колёсами вниз на ближайшее ровное место.' : 'Перенесём тебя на ближайшее безопасное ровное место.'}</div>`
+      + `<div class="note sec"><span class="secno">${ic('sound')}</span>Звук</div>`
       + range('master', 'sound', 'Общая') + range('music', 'music', 'Музыка') + range('sfx', 'pick', 'Эффекты')
       + `<div class="note sec"><span class="secno">${ic('lang')}</span>Язык</div>`
       + `<div class="set">${ic('lang')}<label for="s_lang">Язык</label><select id="s_lang"><option value="ru">Русский</option><option value="en">English (скоро)</option><option value="tr">Türkçe (скоро)</option></select></div>`
@@ -581,6 +623,7 @@ export class UI {
       for (const ev of ['pointerdown', 'touchstart', 'keydown']) inp.addEventListener(ev, e => e.stopPropagation(), { passive: true });
     }
     body.querySelectorAll('[data-skin]').forEach(b => b.onclick = async e => { e.stopPropagation(); b.disabled = true; await this.g.skins?.wear(b.dataset.skin); this.renderSettings(); });
+    body.querySelector('#b_unstuck').onclick = e => { e.stopPropagation(); const r = this.g.unstuck(); this.close(); this.toast(r === 'rover' ? 'Марсоход вытащен на ровное место' : 'Перенесли на безопасное место'); };
     body.querySelector('#b_restart').onclick = async e => { e.stopPropagation(); this.close();
       const id = await this.dialog(`<h2>Начать заново?</h2><p>Весь прогресс планеты, постройки, снаряжение и Род будут удалены. Это нельзя отменить.</p>`, [['rs_no', 'Отмена', 'sec'], ['rs_yes', 'Удалить и начать', 'bad']]);
       if (id !== 'rs_yes') return; this.g.restarting = true; try { localStorage.removeItem(this.g.saveKey()); } catch {} location.reload(); };
@@ -594,7 +637,7 @@ export class UI {
   goalTag() {
     const g = this.g, el = this.el('qtag'); if (!el || !this.camera) return;
     const G = g.goal(), gp = G && g.goalPos?.(G);
-    if (!this.qarrow) { const T = window.THREE_NS; const m = new T.Mesh(new T.ConeGeometry(0.5, 1.0, 4), new T.MeshBasicMaterial({ color: '#ffb400', fog: false })); m.rotation.x = Math.PI; const o = new T.Mesh(new T.ConeGeometry(0.58, 1.12, 4), new T.MeshBasicMaterial({ color: '#1c110d', side: T.BackSide, fog: false })); m.add(o); g.scene.add(m); this.qarrow = m; }
+    if (!this.qarrow) { const T = window.THREE_NS; const m = new T.Mesh(new T.ConeGeometry(0.5, 1.0, 4), new T.MeshBasicMaterial({ color: '#ffb400', fog: false })); m.rotation.x = Math.PI; m.material.depthTest = false; m.renderOrder = 20; const o = new T.Mesh(new T.ConeGeometry(0.58, 1.12, 4), new T.MeshBasicMaterial({ color: '#1c110d', side: T.BackSide, fog: false, depthTest: false })); o.renderOrder = 19; m.add(o); g.scene.add(m); this.qarrow = m; }
     const P = g.player.pos, d = gp ? Math.hypot(gp.x - P.x, gp.z - P.z) : 0;
     this.qarrow.visible = !!gp && !g.dead && d > 2.2;
     if (!gp) { el.style.display = 'none'; return; }
@@ -602,7 +645,9 @@ export class UI {
     this.qarrow.position.set(gp.x, y, gp.z); this.qarrow.rotation.y += 0.04; this.qarrow.scale.setScalar(Math.min(4, 1 + d / 30));
     const v = (this._qv ||= this.camera.position.clone()).set(gp.x, y, gp.z).project(this.camera);
     const on = v.z < 1 && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.85;
-    if (on || this.panel || d < 6) { el.style.display = 'none'; return; }
+    if (this.panel || d < 6) { el.style.display = 'none'; return; }
+    if (on) { if (d < 25) { el.style.display = 'none'; return; }   // в кадре, но далеко (за холмом/в лощине) — метка над стрелкой
+      el.style.display = ''; el.innerHTML = `${ic('star')}<b>${Math.round(d)} м</b>`; el.style.transform = `translate(${(v.x * 0.5 + 0.5) * innerWidth / UI.zoom}px, ${(-v.y * 0.5 + 0.5) * innerHeight / UI.zoom - 34}px) translate(-50%, -50%)`; return; }
     let x = v.x, yy = v.y; if (v.z > 1) { x = -x; yy = -yy; } const k = Math.max(Math.abs(x) / 0.88, Math.abs(yy) / 0.78, 1); x /= k; yy /= k;
     el.style.display = ''; el.innerHTML = `${ic('star')}<b>${Math.round(d)} м</b>`;
     el.style.transform = `translate(${(x * 0.5 + 0.5) * innerWidth / UI.zoom}px, ${(-yy * 0.5 + 0.5) * innerHeight / UI.zoom}px) translate(-50%, -50%)`;
@@ -628,7 +673,8 @@ export class UI {
     if (!this.panel && !g.placing && !g.dead) {
       if (g.driving) t = null;
       else if (g.nearVehicle()) { const V = g.nearVehicle(); t = { x: V.b.x, z: V.b.z, h: 2.2, txt: 'Сесть', sub: 'Марсоход' }; }
-      else if (X.nearC) t = { x: X.nearC.x, z: X.nearC.z, h: 1.1, txt: 'Открыть', sub: X.nearC.name };
+      else if (g.interiors?.nearV) { const v = g.interiors.nearV, S = g.interiors.qs(v.L); t = { x: v.x, z: v.z, y: v.y, h: v.kind === 'fuse' ? 1.6 : 2.6, txt: v.kind === 'fuse' ? 'Взять' : S.on ? 'Работает' : 'Рубильник', sub: v.kind === 'fuse' ? 'Предохранитель' : `${S.placed}/${(v.L.interior.items || []).filter(i => i.kind === 'fuse').length} предохранителей` }; }
+      else if (X.nearC) t = { x: X.nearC.x, z: X.nearC.z, h: 1.1, y: X.nearC.y, txt: 'Открыть', sub: X.nearC.name };
       else if (g.nearMeteor && X.nearM) t = { x: X.nearM.x, z: X.nearM.z, h: 1.3, txt: 'Вскрыть', sub: 'Метеорит', r: 1.4 };
       else if (g.nearStash) t = { x: g.nearStash.x, z: g.nearStash.z, h: 1.15, txt: 'Открыть', sub: g.nearStash.name };
     }
@@ -636,7 +682,7 @@ export class UI {
     if (false) { const T = window.THREE_NS; if (T) { this.ring = new T.Mesh(new T.RingGeometry(0.62, 0.78, 40), new T.MeshBasicMaterial({ color: '#ffcf4a', transparent: true, opacity: 0.85, depthWrite: false, depthTest: false })); this.ring.renderOrder = 999; this.ring.rotation.x = -Math.PI / 2; this.ring.renderOrder = 5; g.scene.add(this.ring); } }
     if (this.ring) this.ring.visible = false; if (false) { this.ring.visible = !!t; if (t) { this.ring.position.set(t.x, g.world.heightAt(t.x, t.z) + 0.06, t.z); const k = 1 + Math.sin(performance.now() / 260) * 0.06; this.ring.scale.setScalar(k * (t.r || 1)); } }
     if (!t) { el.style.display = 'none'; this._wt = null; return; }
-    const v = this._v ||= this.camera.position.clone(); v.set(t.x, g.world.heightAt(t.x, t.z) + t.h, t.z).project(this.camera);
+    const v = this._v ||= this.camera.position.clone(); v.set(t.x, (t.y ?? g.world.heightAt(t.x, t.z)) + t.h, t.z).project(this.camera);
     if (v.z > 1) { el.style.display = 'none'; return; }
     const key = t.txt + t.sub; if (this._wt !== key) { this._wt = key; el.innerHTML = `<b>${t.txt}</b>${kbd('E')}<small>${t.sub}</small>`; }
     el.style.display = ''; el.style.transform = `translate(${(v.x * 0.5 + 0.5) * innerWidth / UI.zoom}px, ${(-v.y * 0.5 + 0.5) * innerHeight / UI.zoom}px) translate(-50%, -100%)`;
@@ -649,9 +695,31 @@ export class UI {
     let v = document.getElementById('pauseveil'); if (!v) { v = document.createElement('div'); v.id = 'pauseveil'; v.innerHTML = `<div><b>Пауза</b><small>нажми или кликни, чтобы продолжить</small></div>`; v.onpointerdown = () => { window.focus(); }; document.body.append(v); }
     v.style.display = on ? 'flex' : 'none';
   }
+  // Плашка у барьера зоны (лёд/буря/ледяная пещера): крупно, как coach, + как набрать нужный параметр.
+  // Появляется при каждом заходе в триггер барьера; «Понятно» прячет до выхода из триггера. Показывает, сколько осталось до открытия.
+  zoneTip(gate) {
+    const now = performance.now(), el = this.ztip ||= (() => { const c = document.createElement('div'); c.className = 'coach zonetip'; c.id = 'zonetip'; c.style.display = 'none'; document.body.append(c); return c; })();
+    // при выходе из триггера — сброс «Понятно»: следующий заход снова покажет плашку
+    if (!gate) { this._ztMuted = null; if (el.style.display !== 'none') el.style.display = 'none'; return; }
+    const show = !this.panel && !this.g.dead && this._ztMuted !== gate.zone.name;
+    if (!show) { if (el.style.display !== 'none') el.style.display = 'none'; return; }
+    const g = this.g, st = gate.zone.gate.stat, need = gate.zone.gate.value, have = g.state.stats[st], rate = g.rates()[st] * 60;
+    const how = st === 'heat' ? this.T.gate_heat_how : st === 'pressure' ? this.T.gate_pressure_how : '';
+    const eta = rate > 0 && have < need ? ` · откроется через ~${fmtT((need - have) / rate * 60)}` : '';
+    const head = gate.cave ? `Тысячелетний лёд: ${gate.zone.name}` : st === 'heat' ? this.T.gate_ice : this.T.gate_storm;
+    const html = `${icc(st === 'heat' ? 'r-ice' : 'g-storm')}<span><b>${head}</b><br>${this.sic(st)} ${g.T.stats[st].name}: <b class="num">${have.toFixed(0)}/${need}</b> — до открытия ещё <b class="num">${Math.max(0, need - have).toFixed(0)}</b>${rate > 0 ? ` <small>(+${rate.toFixed(rate < 1 ? 2 : 1)}/мин${eta})</small>` : ` <small>(пока не растёт)</small>`}<br><small>${how}</small></span>`;
+    if (el._h !== html) { el._h = html; el.innerHTML = html; const b = document.createElement('button'); b.className = 'btn small ok'; b.textContent = 'Понятно'; b.onpointerdown = e => { e.stopPropagation(); this._ztMuted = this._ztKey; el.style.display = 'none'; }; el.append(b); }
+    if (el.style.display === 'none') { el.style.display = 'flex'; this._ztKey = gate.zone.name; this.sfx?.play('toast'); }
+    // Стопкой над другими плашками (например «Рюкзак полон»), не поверх них
+    let bot = 120; for (const c of document.querySelectorAll('.coach:not(.zonetip)')) bot += c.offsetHeight + 10; el.style.bottom = bot + 'px';
+  }
   coach(msg, icon) {
     this.sfx?.play('toast'); const c = document.createElement('div'); c.className = 'coach'; c.innerHTML = `${ic(icon || 'pin')}<span>${msg}</span><button class="btn small ok">Понятно</button>`;
     c.querySelector('button').onpointerdown = e => { e.stopPropagation(); c.remove(); }; document.body.append(c); setTimeout(() => c.remove(), 14000);
+  }
+  banner(title, sub) {
+    let b = document.getElementById('rbanner'); if (!b) { b = document.createElement('div'); b.id = 'rbanner'; this.el('ui').append(b); }
+    b.innerHTML = `<b>${title}</b>${sub ? `<small>${sub}</small>` : ''}`; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); this.sfx?.play(sub ? 'rare' : 'toast'); return true;
   }
   toast(msg, kind) {
     this.sfx?.play(kind === 'warn' ? 'warn' : /rar-(epic|legendary)/.test(kind || '') ? 'rare' : /готово!/.test(msg) ? 'none' : 'toast');

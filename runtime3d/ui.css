@@ -633,3 +633,25 @@ body.suffo .bar.o2,body.suffo .bar.hp{background:rgba(38,21,15,.95)}
 .pvitems{display:flex;flex-wrap:wrap;gap:4px}
 .btn.devbtn{position:absolute;right:max(var(--pad),var(--sar));top:calc(max(var(--pad),var(--sat)) + 52px);width:44px;height:28px;font:900 11px var(--font);background:var(--pink)}
 .dcell.hov{transform:translateY(-3px);box-shadow:0 0 0 3px #ffcf4a,0 6px 0 var(--ink)}
+
+#compass{position:fixed;left:50%;top:10px;transform:translateX(-50%);width:min(520px,60vw);height:30px;pointer-events:none;z-index:2;background:linear-gradient(90deg,transparent,rgba(28,17,13,.45) 15%,rgba(28,17,13,.45) 85%,transparent);border-radius:15px}
+#compass .cmk{position:absolute;top:50%;transform:translate(-50%,-50%);font-style:normal;color:#fff;font:700 13px/1 var(--font,system-ui);display:flex;align-items:center;gap:3px;text-shadow:0 1px 0 #1c110d;white-space:nowrap}
+#compass .cmk.card{color:#ffd9a8;font-size:12px;opacity:.85}
+#compass .cmk .i{width:16px;height:16px;fill:#ffcf4a}
+#compass .cmk.done .i{fill:#9aa4b0}
+#compass .cmk small{font-size:11px;opacity:.9}
+#rbanner{position:fixed;left:50%;top:22%;transform:translateX(-50%);text-align:center;pointer-events:none;opacity:0;z-index:4}
+#rbanner b{display:block;font:900 clamp(26px,4.4vw,46px)/1.05 var(--font,system-ui);color:#fff;text-shadow:0 3px 0 #1c110d,0 0 24px rgba(0,0,0,.45);letter-spacing:.02em}
+#rbanner small{display:block;margin-top:6px;font:800 16px/1 var(--font,system-ui);color:#ffcf4a;text-shadow:0 2px 0 #1c110d}
+#rbanner.on{animation:rban 4.2s ease forwards}
+@keyframes rban{0%{opacity:0;transform:translate(-50%,10px) scale(.96)}12%{opacity:1;transform:translate(-50%,0) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-8px)}}
+
+/* Цель онбординга в меню крафта/стройки: пульсирующая обводка карточки + метка «нужно для задания» */
+.row.goalrow{border-color:#ffcf4a;box-shadow:0 0 0 3px #ffcf4a,0 2px 0 var(--ink);animation:goalP .8s ease-in-out infinite alternate;background:linear-gradient(90deg,rgba(255,207,74,.28),var(--cocoa-2) 70%)}
+@keyframes goalP{to{box-shadow:0 0 0 6px #ffcf4a66,0 2px 0 var(--ink)}}
+.goaltag{display:inline-flex;align-items:center;gap:3px;margin:0 8px 0 0;padding:1px 7px;border:2px solid var(--ink);border-radius:8px;background:#ffcf4a;color:#1c110d;font:900 11px/1.3 var(--font);vertical-align:2px}.goaltag .i{width:12px;height:12px}
+.note.sec.goalsec{color:#ffcf4a}.note.sec .goaltag{margin-left:8px}
+.note.goalnote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#ffcf4a;color:#1c110d;border:2px solid var(--ink);border-radius:12px;padding:8px 10px;margin-bottom:10px;font-weight:700}.note.goalnote .btn{margin-left:auto}
+/* Плашка у барьера зоны — как coach, выше подсказок */
+.coach.zonetip{bottom:120px;z-index:29}.coach.zonetip>span{flex:1}.coach.zonetip small{font-weight:600;opacity:.85}.coach.zonetip .i{width:34px;height:34px}
+.row.soon{opacity:.8;border-style:dashed}

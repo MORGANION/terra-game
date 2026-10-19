@@ -42,10 +42,18 @@ function makePiece(id) {
 const M = 4, MH = 3;
 const SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // 0: −z, 1: +x, 2: +z, 3: −x
 const DOOR_W = 1.6;
-function sideFrame(s, i, j) { // центр ребра и поворот (стена вдоль локальной X)
-  const cx = i * M + M / 2, cz = j * M + M / 2, [a, b] = SIDES[s];
-  return { x: cx + a * M / 2, z: cz + b * M / 2, rot: s % 2 ? Math.PI / 2 : 0, out: [a, b] };
+// Рама модуля: m.F = {x, z, a} — сдвиг и поворот локальной сетки (модули, пристыкованные к куполу, стоят в его раме).
+// Без F — мировая сетка. Локальная (lx, lz) → мир: x = F.x + c·lx − s·lz, z = F.z + s·lx + c·lz.
+const fkey = F => F ? F.x + ',' + F.z + ',' + F.a : '';
+const toW = (F, lx, lz) => { if (!F) return [lx, lz]; const c = Math.cos(F.a), s = Math.sin(F.a); return [F.x + c * lx - s * lz, F.z + s * lx + c * lz]; };
+const toL = (F, x, z) => { if (!F) return [x, z]; const c = Math.cos(F.a), s = Math.sin(F.a), dx = x - F.x, dz = z - F.z; return [c * dx + s * dz, -s * dx + c * dz]; };
+const dirW = (F, a, b) => { if (!F) return [a, b]; const c = Math.cos(F.a), s = Math.sin(F.a); return [c * a - s * b, s * a + c * b]; };
+const modC = m => toW(m.F, m.i * M + M / 2, m.j * M + M / 2);   // мировой центр модуля
+function sideFrame(s, m) { // центр ребра (мир), наружу (мир и локально)
+  const [a, b] = SIDES[s], [x, z] = toW(m.F, m.i * M + M / 2 + a * M / 2, m.j * M + M / 2 + b * M / 2);
+  return { x, z, rot: s % 2 ? Math.PI / 2 : 0, out: dirW(m.F, a, b), lout: [a, b] };
 }
+const DOCK_SIDE = 3;   // у пристыкованного модуля сторона −x смотрит в купол
 function makeSide(kind, glass, H) {
   const g = new THREE.Group(), L = M, hull = mat('hull'), gl = mat('glass', { transparent: true, opacity: 0.35, emissive: '#2a6080', emissiveIntensity: 0.3 });
   const panel = (w, x) => {
@@ -53,6 +61,10 @@ function makeSide(kind, glass, H) {
     else { g.add(box(w, 0.95, T, hull, x, 0.475 + 0.2, 0)); g.add(box(w, 0.75, 0.05, gl, x, 1.55 + 0.2, 0)); g.add(box(w, H - 1.95, T, hull, x, 1.93 + 0.2 + (H - 1.95) / 2, 0)); g.add(box(w + 0.01, 0.1, T + 0.04, mat('trim'), x, 1.12 + 0.2, 0)); }
   };
   if (kind === 'wall') panel(L, 0);
+  if (kind === 'dock') { // стыковка с куполом: открытый проём
+    const w = (L - DOOR_W) / 2; panel(w, -(DOOR_W / 2 + w / 2)); panel(w, DOOR_W / 2 + w / 2);
+    g.add(box(DOOR_W, H - 2.3, T, hull, 0, 2.3 + 0.2 + (H - 2.3) / 2, 0)); g.add(box(DOOR_W + 0.2, 0.14, T + 0.08, mat('trim'), 0, 2.37, 0));
+  }
   if (kind === 'door') {
     const w = (L - DOOR_W) / 2; panel(w, -(DOOR_W / 2 + w / 2)); panel(w, DOOR_W / 2 + w / 2);
     g.add(box(DOOR_W, H - 2.3, T, hull, 0, 2.3 + 0.2 + (H - 2.3) / 2, 0));
@@ -73,14 +85,22 @@ function makeModuleGLB(models, id, sides, footY) {
   const cut = new THREE.Group(); cut.name = 'cutaway'; cut.visible = false; g.add(cut);
   g.add(box(M, 0.25, M, mat('floor'), 0, 0.125, 0));
   sides.forEach((k, s) => { if (k === 'open') return; const [a, b] = SIDES[s], q = new THREE.Group();
-    for (const [w0, x0] of k === 'door' ? [[(3.7 - DOOR_W) / 2, -(DOOR_W / 2 + (3.7 - DOOR_W) / 4)], [(3.7 - DOOR_W) / 2, DOOR_W / 2 + (3.7 - DOOR_W) / 4]] : [[3.7, 0]]) { q.add(box(w0, 0.9, 0.14, mat('hull'), x0, 0.7, 0)); q.add(box(w0 + 0.02, 0.12, 0.16, mat('#9b3a22'), x0, 1.1, 0)); } q.position.set(a * 1.85, 0, b * 1.85); q.rotation.y = s % 2 ? Math.PI / 2 : 0; cut.add(q); });
+    for (const [w0, x0] of k === 'door' || k === 'dock' ? [[(3.7 - DOOR_W) / 2, -(DOOR_W / 2 + (3.7 - DOOR_W) / 4)], [(3.7 - DOOR_W) / 2, DOOR_W / 2 + (3.7 - DOOR_W) / 4]] : [[3.7, 0]]) { q.add(box(w0, 0.9, 0.14, mat('hull'), x0, 0.7, 0)); q.add(box(w0 + 0.02, 0.12, 0.16, mat('#9b3a22'), x0, 1.1, 0)); } q.position.set(a * 1.85, 0, b * 1.85); q.rotation.y = s % 2 ? Math.PI / 2 : 0; cut.add(q); });
   const fd = Math.max(0.3, footY);
   for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.add(box(0.3, fd + 0.4, 0.3, mat('metal'), a * 1.3, -fd / 2 - 0.2, b * 1.3)); g.add(box(0.7, 0.12, 0.7, mat('#9b3a22'), a * 1.3, -fd - 0.3, b * 1.3)); }
   const roof = new THREE.Group(); roof.name = 'roof'; g.add(roof);
+  // Пол перемычки к куполу — в корне модуля, чтобы не прятался вместе со стенами при виде изнутри
+  sides.forEach((k, s) => { if (k !== 'dock') return; const [a, b] = SIDES[s], fl = box(Math.abs(a) ? 1.3 : DOOR_W + 0.3, 0.14, Math.abs(b) ? 1.3 : DOOR_W + 0.3, mat('#a89a86'), a * 2.35, 0.2, b * 2.35); fl.name = 'dockfloor'; g.add(fl); });
   sides.forEach((k, s) => {
     const [a, b] = SIDES[s], f = new THREE.Group(); f.position.set(a * 1.85, 0, b * 1.85); f.rotation.y = s % 2 ? Math.PI / 2 : 0; f.name = 'side' + s; g.add(f);
     if (k === 'open') { // короткий переход-рукав к соседу (по половине с каждой стороны)
       const tube = box(2.0, 2.5, 0.36, mat('hull'), 0, 1.4, 0.06); f.add(tube); f.add(box(2.1, 0.16, 0.38, mat('#9b3a22'), 0, 2.55, 0.06)); f.add(box(2.1, 0.16, 0.38, mat('#9b3a22'), 0, 0.25, 0.06));
+    }
+    if (k === 'dock') { // перемычка к куполу: рама проёма + короткий рукав до стены купола
+      const sg = s === 0 || s === 3 ? -1 : 1, hm = mat('hull'), rd = mat('#9b3a22');
+      for (const x of [-1, 1]) f.add(box(0.3, 2.6, 1.0, hm, x * (DOOR_W / 2 + 0.15), 1.4, sg * 0.4));
+      f.add(box(DOOR_W + 0.6, 0.45, 1.0, hm, 0, 2.5, sg * 0.4)); f.add(box(DOOR_W + 0.66, 0.14, 1.04, rd, 0, 2.75, sg * 0.4));
+      const lamp = box(0.6, 0.1, 0.1, mat('#5cd6a8', { emissive: '#5cd6a8', emissiveIntensity: 1.6 }), 0, 2.2, sg * 0.92); f.add(lamp);
     }
     if (k === 'door') { // шлюз: выступающий тамбур с раздвижными створками
       f.add(box(DOOR_W + 0.5, 2.45, 0.7, mat('hull'), 0, 1.35, 0.2)); f.add(box(DOOR_W + 0.56, 0.16, 0.74, mat('#9b3a22'), 0, 2.55, 0.2));
@@ -104,18 +124,26 @@ function makeModule(id, sides, footY) {
   if (!glass) { roof.add(box(M + 0.2, 0.1, 0.2, mat('trim'), 0, H + 0.3, M / 2)); roof.add(box(M + 0.2, 0.1, 0.2, mat('trim'), 0, H + 0.3, -M / 2)); roof.add(box(1.2, 0.4, 1.2, mat('dark'), 0.6, H + 0.5, -0.6)); }
   roof.add(box(1.2, 0.05, 1.2, mat('#fff3d0', { emissive: '#ffe2a0', emissiveIntensity: 1.6 }), 0, H + 0.17, 0));
   g.add(roof);
-  sides.forEach((k, s) => { if (k === 'open') return; const f = makeSide(k, glass, H); const [a, b] = SIDES[s]; f.position.set(a * M / 2, 0, b * M / 2); f.rotation.y = s % 2 ? Math.PI / 2 : 0; f.name = 'side' + s; g.add(f); });
+  sides.forEach((k, s) => { if (k === 'open') return; const f = makeSide(k, glass, H); const [a, b] = SIDES[s]; f.position.set(a * M / 2, 0, b * M / 2); f.rotation.y = s % 2 ? Math.PI / 2 : 0; f.name = 'side' + s; g.add(f);
+    if (k === 'dock') { g.add(box(Math.abs(a) ? 1.3 : DOOR_W + 0.3, 0.14, Math.abs(b) ? 1.3 : DOOR_W + 0.3, mat('#a89a86'), a * 2.5, 0.2, b * 2.5)); const sg = s === 0 || s === 3 ? -1 : 1; for (const x of [-1, 1]) f.add(box(0.3, 2.6, 0.6, mat('hull'), x * (DOOR_W / 2 + 0.15), 1.4, sg * 0.3)); f.add(box(DOOR_W + 0.6, 0.4, 0.6, mat('hull'), 0, 2.55, sg * 0.3)); } });
   return g;
 }
 
 // ---------- Купол: большой круглый модуль со шлюзом (стартовый на базе + крафтовый) ----------
 const DOME_H = 0.62;   // сплюснутость полусферы (большие купола)
 const domeH = r => Math.max(DOME_H, 2.9 / r);   // малые — ближе к полусфере, чтобы герой не упирался головой
-function makeDome(r, doorA) {
+function makeDome(r, doorA, docks = []) {
   const g = new THREE.Group(), DOME_H = domeH(r);
   { const fl = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.05, r - 0.05, 0.2, 40), mat('floor')); fl.position.y = 0.1; fl.receiveShadow = true; g.add(fl); }
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.12, r + 0.45, 3.6, 40, 1, true), mat('hull', { side: THREE.DoubleSide })); base.position.y = -1.33; g.add(base);
-  const stripe = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.16, r + 0.2, 0.12, 40, 1, true), mat('#9b3a22', { side: THREE.DoubleSide })); stripe.position.y = 0.42; g.add(stripe);
+  // Юбка и полоса — дугами: в местах стыковки с модулями разрыв (порог прохода на уровне пола)
+  const gap = (DOOR_W / 2 + 0.1) / r, TAU = Math.PI * 2, th = a => ((Math.PI / 2 - a) % TAU + TAU) % TAU;   // мировой угол → theta цилиндра
+  const cuts = docks.map(a => th(a)).sort((a, b) => a - b), arcs = [];
+  if (!cuts.length) arcs.push([0, TAU]); else cuts.forEach((c, i) => { const n = i + 1 < cuts.length ? cuts[i + 1] : cuts[0] + TAU; if (n - c > 2 * gap) arcs.push([c + gap, n - c - 2 * gap]); });
+  for (const [t0, tl] of arcs) {
+    const seg = Math.max(3, Math.round(40 * tl / TAU));
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.12, r + 0.45, 3.6, seg, 1, true, t0, tl), mat('hull', { side: THREE.DoubleSide })); base.position.y = -1.33; g.add(base);
+    const stripe = new THREE.Mesh(new THREE.CylinderGeometry(r + 0.16, r + 0.2, 0.12, seg, 1, true, t0, tl), mat('#9b3a22', { side: THREE.DoubleSide })); stripe.position.y = 0.42; g.add(stripe);
+  }
   const shell = new THREE.Group(); shell.name = 'shell'; g.add(shell);
   const glass = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 7, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#bfe6ff', transparent: true, opacity: 0.26, roughness: 0.1, flatShading: true, side: THREE.DoubleSide, depthWrite: false }));
   glass.scale.y = DOME_H; glass.position.y = 0.45; glass.name = 'glass'; shell.add(glass);
@@ -154,7 +182,7 @@ export class Builder {
   // ---------- Купола ----------
   addDome(d, fresh) {
     if (d.y == null) { let hi = -Infinity; for (let a = 0; a < 16; a++) for (const k of [0, 0.5, 0.95]) { const an = a / 16 * Math.PI * 2; hi = Math.max(hi, this.g.world.heightAt(d.x + Math.cos(an) * d.r * k, d.z + Math.sin(an) * d.r * k)); } d.y = +hi.toFixed(2); }
-    const o = makeDome(d.r, d.door); o.position.set(d.x, d.y, d.z); this.g.scene.add(o);
+    const o = makeDome(d.r, d.door, this.docksOf(d)); o.position.set(d.x, d.y, d.z); this.g.scene.add(o);
     const D = { ...d, obj: o, src: d }; this.domes.push(D);
     if (fresh) { o.scale.setScalar(0.01); (this.g.pop ||= []).push({ o, t: 0 }); }
     return D;
@@ -171,48 +199,99 @@ export class Builder {
     if (this.domes.some(D => Math.hypot(D.x - d.x, D.z - d.z) < D.r + d.r + 1)) return 'мешает другой купол';
     if ((this.g.cfg.world.props || []).some(p => Math.hypot(p.x - d.x, p.z - d.z) < d.r + 3)) return 'мешает шаттл';
     if ((this.g.explore?.wrecks || []).some(w => !w.gone && Math.hypot(w.x - d.x, w.z - d.z) < d.r + 1.5)) return 'мешают обломки';
-    if (this.g.state.modules.some(m => Math.hypot(m.i * M + M / 2 - d.x, m.j * M + M / 2 - d.z) < d.r + 3)) return 'мешает модуль';
+    if (this.g.state.modules.some(m => { const [x, z] = modC(m); return Math.hypot(x - d.x, z - d.z) < d.r + 3; })) return 'мешает модуль';
     if (this.g.state.buildings.some(b => b.y == null && Math.hypot(b.x - d.x, b.z - d.z) < d.r + 1)) return 'мешает постройка';
     return null;
   }
   // ---------- Модули ----------
-  modAt(i, j) { return this.g.state.modules.find(m => m.i === i && m.j === j); }
-  modOfPos(x, z) { return this.modAt(Math.floor(x / M), Math.floor(z / M)); }
-  sidesOf(m) { return SIDES.map(([a, b], s) => this.modAt(m.i + a, m.j + b) ? 'open' : (m.doors || []).includes(s) ? 'door' : 'wall'); }
-  groundRange(i, j) { let lo = Infinity, hi = -Infinity; for (let a = 0; a <= 4; a++) for (let b = 0; b <= 4; b++) { const h = this.g.world.heightAt(i * M + a, j * M + b); lo = Math.min(lo, h); hi = Math.max(hi, h); } return [lo, hi]; }
+  modAt(i, j, F) { const k = fkey(F); return this.g.state.modules.find(m => m.i === i && m.j === j && fkey(m.F) === k); }
+  modOfPos(x, z) { for (const m of this.g.state.modules) { const [lx, lz] = toL(m.F, x, z); if (Math.floor(lx / M) === m.i && Math.floor(lz / M) === m.j) return m; } return null; }
+  nbOf(m, s) { return this.modAt(m.i + SIDES[s][0], m.j + SIDES[s][1], m.F); }
+  sidesOf(m) { return SIDES.map((_, s) => this.nbOf(m, s) ? 'open' : m.dock && s === DOCK_SIDE ? 'dock' : (m.doors || []).includes(s) ? 'door' : 'wall'); }
+  mkey(m) { return 'M:' + fkey(m.F) + ':' + m.i + ',' + m.j; }
+  domeOfDock(m) { return m.dock && this.domes.find(D => Math.abs(D.x - m.dock.x) < 0.01 && Math.abs(D.z - m.dock.z) < 0.01); }
+  // Углы стыковок купола (проёмы в стене купола)
+  docksOf(D) { return this.g.state.modules.filter(m => m.dock && Math.abs(D.x - m.dock.x) < 0.01 && Math.abs(D.z - m.dock.z) < 0.01).map(m => m.dock.a); }
+  // Точка в перемычке купол↔модуль: пол на уровне купола, герметично
+  dockAt(x, z) {
+    for (const m of this.g.state.modules) { if (!m.dock) continue; const D = this.domeOfDock(m); if (!D) continue;
+      const c = Math.cos(m.dock.a), sn = Math.sin(m.dock.a), ox = x - D.x, oz = z - D.z, along = ox * c + oz * sn, lat = Math.abs(-ox * sn + oz * c);
+      if (along > D.r - 0.9 && along < D.r + 0.9 && lat < DOOR_W / 2 + 0.25) return { D, m }; }
+    return null;
+  }
+  groundRange(m) { let lo = Infinity, hi = -Infinity; for (let a = 0; a <= 4; a++) for (let b = 0; b <= 4; b++) { const [x, z] = toW(m.F, m.i * M + a, m.j * M + b), h = this.g.world.heightAt(x, z); lo = Math.min(lo, h); hi = Math.max(hi, h); } return [lo, hi]; }
+  buildModule(m, sides, footY) { return this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, sides, footY) : makeModule(m.id, sides, footY); }
   spawnModule(m, fresh) {
-    const k = 'M:' + m.i + ',' + m.j, old = this.mobjs.get(k); if (old) this.g.scene.remove(old);
-    const [lo] = this.groundRange(m.i, m.j);
-    const o = this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, this.sidesOf(m), m.y - lo + 0.3) : makeModule(m.id, this.sidesOf(m), m.y - lo + 0.3);
-    o.position.set(m.i * M + M / 2, m.y, m.j * M + M / 2); o.userData.m = m;
-    // Пандус к двери, если пол выше земли
-    for (const s of m.doors || []) { if (this.modAt(m.i + SIDES[s][0], m.j + SIDES[s][1])) continue; const f = sideFrame(s, m.i, m.j), gx = f.x + f.out[0] * 1.6, gz = f.z + f.out[1] * 1.6, dh = m.y + 0.25 - this.g.world.heightAt(gx, gz); if (dh < 0.25) continue;
-      const len = Math.hypot(2, dh), r = box(DOOR_W, 0.12, len, mat('metal'), 0, 0, 0); const rg = new THREE.Group(); rg.add(r); rg.position.set(f.out[0] * (M / 2 + 1), 0.25 - dh / 2, f.out[1] * (M / 2 + 1)); rg.rotation.y = Math.atan2(f.out[0], f.out[1]); r.rotation.x = Math.atan2(dh, 2); for (const sg of [-1, 1]) { const rail = box(0.06, 0.06, len, mat('trim'), sg * (DOOR_W / 2 - 0.03), 0.9, 0); r.add(rail); } o.add(rg); }
+    const k = this.mkey(m), old = this.mobjs.get(k); if (old) this.g.scene.remove(old);
+    const [lo] = this.groundRange(m);
+    const o = this.buildModule(m, this.sidesOf(m), m.y - lo + 0.3);
+    const [cx, cz] = modC(m); o.position.set(cx, m.y, cz); o.rotation.y = -(m.F?.a || 0); o.userData.m = m;
+    // Пандус к двери, если пол выше земли (в локальных осях модуля)
+    for (const s of m.doors || []) { if (this.nbOf(m, s)) continue; const f = sideFrame(s, m), gx = f.x + f.out[0] * 1.6, gz = f.z + f.out[1] * 1.6, dh = m.y + 0.25 - this.g.world.heightAt(gx, gz); if (dh < 0.25) continue;
+      const len = Math.hypot(2, dh), r = box(DOOR_W, 0.12, len, mat('metal'), 0, 0, 0); const rg = new THREE.Group(); rg.add(r); rg.position.set(f.lout[0] * (M / 2 + 1), 0.25 - dh / 2, f.lout[1] * (M / 2 + 1)); rg.rotation.y = Math.atan2(f.lout[0], f.lout[1]); r.rotation.x = Math.atan2(dh, 2); for (const sg of [-1, 1]) { const rail = box(0.06, 0.06, len, mat('trim'), sg * (DOOR_W / 2 - 0.03), 0.9, 0); r.add(rail); } o.add(rg); }
     this.g.scene.add(o); this.mobjs.set(k, o);
     if (fresh) { o.scale.setScalar(0.01); (this.g.pop ||= []).push({ o, t: 0 }); }
-    this.solidsDirty = true; this.hiddenFor = null;
+    this.solidsDirty = true; this.msegs = null; this.hiddenFor = null; this.mHidden = null;
   }
-  refreshAround(m) { this.spawnModule(m, false); for (const [a, b] of SIDES) { const n = this.modAt(m.i + a, m.j + b); if (n) this.spawnModule(n, false); } }
+  // Перестроить купол (разрывы юбки под стыковки), оболочку/шлюз сохраняем в том же состоянии
+  refreshDome(D) { if (!D) return; const o = makeDome(D.r, D.door, this.docksOf(D)); o.position.copy(D.obj.position); this.g.scene.remove(D.obj); this.g.scene.add(o); D.obj = o; }
+  refreshAround(m) { this.spawnModule(m, false); for (let s = 0; s < 4; s++) { const n = this.nbOf(m, s); if (n) this.spawnModule(n, false); } }
+  // Стыковка к куполу: модуль встаёт вплотную к стене, сторона −x — проём в купол. Угол — шаг 15°.
+  // Почему к куполу D нельзя пристыковаться под углом a (null — можно)
+  dockWhy(D, a) {
+    if (angDiff(a, D.door) < 1.0) return 'мешает шлюз купола — встань у другой стороны';
+    if (this.docksOf(D).some(b => angDiff(b, a) < 1.2)) return 'здесь уже стыковка';
+    // проход изнутри купола не должен упираться в фабрикатор/сундук
+    const ix = D.x + Math.cos(a) * (D.r - 1.1), iz = D.z + Math.sin(a) * (D.r - 1.1);
+    if (this.g.player.nearSolids(ix, iz).some(q => Math.hypot(q.x - ix, q.z - iz) < q.r + 0.9)) return 'проход загородит мебель в куполе — сдвинься вбок';
+    return null;
+  }
+  dockTarget(ax, az) {
+    let best = null, bd = Infinity;
+    for (const D of this.domes) { const d = Math.hypot(ax - D.x, az - D.z); if (d < D.r + 7 && d - D.r < bd) { bd = d - D.r; best = D; } }
+    if (!best) return null;
+    const D = best, step = Math.PI / 12, a0 = Math.round(Math.atan2(az - D.z, ax - D.x) / step) * step, dc = D.r + 2.3;
+    // ближайший свободный угол (±60°): призрак сам съезжает с мебели/шлюза
+    let a = a0; for (const k of [0, 1, -1, 2, -2, 3, -3, 4, -4]) if (!this.dockWhy(D, a0 + k * step)) { a = a0 + k * step; break; }
+    a = Math.atan2(Math.sin(a), Math.cos(a));
+    const c = Math.cos(a), sn = Math.sin(a), cx = D.x + c * dc, cz = D.z + sn * dc;
+    // F такой, что центр ячейки (0,0) — локально (2,2) — попадает в (cx, cz), а локальная +x смотрит от купола
+    const F = { x: +(cx - (c * 2 - sn * 2)).toFixed(3), z: +(cz - (sn * 2 + c * 2)).toFixed(3), a: +a.toFixed(4) };
+    return { D, F, a: F.a };
+  }
   modTarget() {
     const pl = this.g.player, f = pl.forward(), ax = pl.pos.x + f.x * 3.6, az = pl.pos.z + f.z * 3.6;
-    const m = { id: this.mode.id, i: Math.floor(ax / M), j: Math.floor(az / M) };
-    // Дверь — по умолчанию на стороне к игроку, R перебирает стороны
-    const cx = m.i * M + M / 2, cz = m.j * M + M / 2, dx = pl.pos.x - cx, dz = pl.pos.z - cz;
+    // 1) Рядом уже есть модуль — пристраиваем бок о бок в его раме
+    const frames = new Map(); for (const q of this.g.state.modules) frames.set(fkey(q.F), q.F);
+    let m = null;
+    for (const F of frames.values()) { const [lx, lz] = toL(F, ax, az), c = { id: this.mode.id, i: Math.floor(lx / M), j: Math.floor(lz / M) }; if (F) c.F = F;
+      if (!this.modAt(c.i, c.j, F) && SIDES.some(([a, b]) => this.modAt(c.i + a, c.j + b, F))) { m = c; break; } }
+    // 2) Рядом купол — стыкуемся к его стене
+    let dk = null;
+    if (!m && (dk = this.dockTarget(ax, az))) { m = { id: this.mode.id, i: 0, j: 0, F: dk.F, dock: { x: dk.D.x, z: dk.D.z, a: dk.a } }; }
+    // 3) Иначе — отдельный модуль по мировой сетке
+    if (!m) m = { id: this.mode.id, i: Math.floor(ax / M), j: Math.floor(az / M) };
+    const nb = SIDES.map(([a, b]) => this.modAt(m.i + a, m.j + b, m.F)).find(Boolean);
+    const [cx, cz] = modC(m), [lpx, lpz] = toL(m.F, pl.pos.x, pl.pos.z), dx = lpx - (m.i * M + M / 2), dz = lpz - (m.j * M + M / 2);
     const toward = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 1 : 3) : (dz > 0 ? 2 : 0);
-    const nb = SIDES.map(([a, b]) => this.modAt(m.i + a, m.j + b)).find(Boolean);
-    // Одна дверь на связную постройку: пристройка — без двери; R у пристройки добавляет дверь на выбранную сторону
-    m.doors = !nb ? [(toward + this.mode.rot) % 4] : this.mode.rot ? [(toward + this.mode.rot - 1) % 4] : [];
-    const [lo, hi] = this.groundRange(m.i, m.j);
-    m.y = +(nb ? nb.y : hi + 0.05).toFixed(2); m.lo = lo; m.hi = hi;
+    // Одна дверь на связную постройку: пристройка/стыковка — без двери; R добавляет дверь на выбранную сторону
+    if (m.dock) m.doors = this.mode.rot % 4 ? [[0, 1, 2][(this.mode.rot - 1) % 3]] : [];
+    else m.doors = !nb ? [(toward + this.mode.rot) % 4] : this.mode.rot ? [(toward + this.mode.rot - 1) % 4] : [];
+    const [lo, hi] = this.groundRange(m);
+    m.y = +(m.dock ? dk.D.y - 0.05 : nb ? nb.y : hi + 0.05).toFixed(2); m.lo = lo; m.hi = hi; m.cx = cx; m.cz = cz;
+    if (m.dock) m._D = dk.D;
     return m;
   }
   modOk(m) {
-    if (this.modAt(m.i, m.j)) return 'занято';
-    const cx = m.i * M + M / 2, cz = m.j * M + M / 2;
+    if (this.modAt(m.i, m.j, m.F)) return 'занято';
+    const [cx, cz] = modC(m);
+    if (this.g.state.modules.some(q => { const [qx, qz] = modC(q); return Math.hypot(qx - cx, qz - cz) < 3.9; })) return 'занято';
     if (this.g.world.waterAt(cx, cz) > this.g.world.heightAt(cx, cz)) return 'вода';
+    if (m.dock) { const why = this.dockWhy(m._D || this.domeOfDock(m), m.dock.a); if (why) return why; }
+    for (const D of this.domes) if (Math.hypot(D.x - cx, D.z - cz) < D.r + (m.dock && this.domeOfDock(m) === D || m._D === D ? 2.2 : 2.6)) return 'мешает купол';
     if (m.hi > m.y + 0.35) return 'земля выше пола — ставь ниже или на ровном';
     if (m.y - m.lo > 4) return 'слишком высоко над землёй';
-    if (this.g.state.buildings.some(b => b.y == null && b.x > m.i * M - 0.8 && b.x < m.i * M + M + 0.8 && b.z > m.j * M - 0.8 && b.z < m.j * M + M + 0.8)) return 'мешает постройка';
+    if (this.g.state.buildings.some(b => { if (b.y != null) return false; const [lx, lz] = toL(m.F, b.x, b.z); return lx > m.i * M - 0.8 && lx < m.i * M + M + 0.8 && lz > m.j * M - 0.8 && lz < m.j * M + M + 0.8; })) return 'мешает постройка';
     return null;
   }
 
@@ -309,8 +388,9 @@ export class Builder {
       const m = this.modTarget(), P = this.P[m.id], why = this.modOk(m);
       if (why) { this.g.ui.toast('Сюда нельзя: ' + why, 'warn'); return false; }
       if (!this.g.take(P.cost)) { this.g.ui.toast('Не хватает ресурсов', 'warn'); return false; }
-      delete m.lo; delete m.hi; this.g.state.modules.push(m); this.spawnModule(m, true); this.refreshAround(m);
-      this.g.qa.event('house', { id: m.id }); this.g.life?.quest('build', 1); this.g.save();
+      delete m.lo; delete m.hi; delete m.cx; delete m.cz; delete m._D; this.g.state.modules.push(m); this.spawnModule(m, true); this.refreshAround(m);
+      if (m.dock) { this.refreshDome(this.domeOfDock(m)); this.g.ui.toast('Модуль пристыкован к куполу — проход открыт'); }
+      this.g.qa.event('house', { id: m.id, dock: !!m.dock }); this.g.life?.quest('build', 1); this.g.save();
       if (!this.g.has(P.cost)) { this.cancel(); this.g.ui.toast('Ресурсы на модуль кончились'); }
       return true;
     }
@@ -331,15 +411,16 @@ export class Builder {
     const pl = this.g.player, f = pl.forward(), ax = pl.pos.x + f.x * 0.8, az = pl.pos.z + f.z * 0.8;
     let best = null, bd = 2.6;
     const pd = this.domes.find(D => !D.starter && Math.hypot(pl.pos.x - (D.x + Math.cos(D.door) * (D.r + 1.5)), pl.pos.z - (D.z + Math.sin(D.door) * (D.r + 1.5))) < 2.2);
+    if (pd && this.docksOf(pd).length) { this.g.ui.toast('Сначала разбери пристыкованные модули', 'warn'); return false; }
     if (pd) { const P = this.P.m_dome; this.g.scene.remove(pd.obj); this.domes.splice(this.domes.indexOf(pd), 1); this.g.state.domes.splice(this.g.state.domes.indexOf(pd.src), 1);
       for (const [k2, v] of Object.entries(P.cost)) this.g.state.inv[k2] = (this.g.state.inv[k2] || 0) + v; this.solidsDirty = true; this.g.save(); this.g.ui.toast(`Разобрано: ${P.name}`); return true; }
     const pm = this.modOfPos(pl.pos.x + f.x * 2.5, pl.pos.z + f.z * 2.5) || this.modOfPos(pl.pos.x, pl.pos.z);
     if (pm && !this.g.state.house.some(p => { const { x, z } = p.x != null ? p : this.place(p); return Math.hypot(x - ax, z - az) < 1.2; })) {
       const P = this.P[pm.id]; this.g.state.modules.splice(this.g.state.modules.indexOf(pm), 1);
-      const k = 'M:' + pm.i + ',' + pm.j; this.g.scene.remove(this.mobjs.get(k)); this.mobjs.delete(k);
-      for (const [a, b] of SIDES) { const n = this.modAt(pm.i + a, pm.j + b); if (n) this.spawnModule(n, false); }
+      const k = this.mkey(pm); this.g.scene.remove(this.mobjs.get(k)); this.mobjs.delete(k); if (pm.dock) this.refreshDome(this.domeOfDock(pm));
+      for (let s2 = 0; s2 < 4; s2++) { const n = this.nbOf(pm, s2); if (n) this.spawnModule(n, false); }
       for (const [k2, v] of Object.entries(P.cost)) this.g.state.inv[k2] = (this.g.state.inv[k2] || 0) + v;
-      this.solidsDirty = true; this.hiddenFor = null; this.g.save(); this.g.ui.toast(`Разобрано: ${P.name}`); return true;
+      this.solidsDirty = true; this.msegs = null; this.hiddenFor = null; this.mHidden = null; this.g.save(); this.g.ui.toast(`Разобрано: ${P.name}`); return true;
     }
     for (const p of this.g.state.house) { const { x, z } = p.x != null ? p : this.place(p); const d = Math.hypot(x - ax, z - az); if (d < bd) { bd = d; best = p; } }
     if (!best) return false;
@@ -358,7 +439,7 @@ export class Builder {
     if (this.solidsDirty) { this.segs = this.g.state.house.filter(p => this.kind(p.id) === 'wall' && !this.P[p.id].pass).map(p => { const x0 = p.i * G, z0 = p.j * G; return p.e === 0 ? [x0, z0, x0 + G, z0] : [x0, z0, x0, z0 + G]; }); this.solidsDirty = false; }
     if (this.solidsDirty || !this.msegs) {
       this.msegs = [];
-      for (const m of this.g.state.modules) this.sidesOf(m).forEach((k, s) => { if (k === 'open') return; const f = sideFrame(s, m.i, m.j), ax = s % 2 ? 0 : 1, az = s % 2 ? 1 : 0, h = M / 2, top = m.y + MH + 0.4, bot = m.y - 0.6;
+      for (const m of this.g.state.modules) this.sidesOf(m).forEach((k, s) => { if (k === 'open') return; const f = sideFrame(s, m), [ax, az] = dirW(m.F, s % 2 ? 0 : 1, s % 2 ? 1 : 0), h = M / 2, top = m.y + MH + 0.4, bot = m.y - 0.6;
         if (k === 'wall') this.msegs.push([f.x - ax * h, f.z - az * h, f.x + ax * h, f.z + az * h, bot, top]);
         else { const e = DOOR_W / 2; this.msegs.push([f.x - ax * h, f.z - az * h, f.x - ax * e, f.z - az * e, bot, top], [f.x + ax * e, f.z + az * e, f.x + ax * h, f.z + az * h, bot, top]); } });
     }
@@ -367,6 +448,7 @@ export class Builder {
       const dx = pos.x - D.x, dz = pos.z - D.z, d = Math.hypot(dx, dz), was = Math.hypot(P0.x - D.x, P0.z - D.z);
       if (Math.abs(d - D.r) > 0.5 || d < 1e-3) continue;
       if (angDiff(Math.atan2(dz, dx), D.door) < 0.75 / D.r) continue;                    // проём шлюза
+      if (this.docksOf(D).some(a => angDiff(Math.atan2(dz, dx), a) < (DOOR_W / 2 - 0.3) / D.r)) continue;   // проём стыковки с модулем
       const R = was < D.r ? D.r - 0.5 : D.r + 0.5; pos.x = D.x + dx / d * R; pos.z = D.z + dz / d * R; }
     for (const [x1, z1, x2, z2, bot, top] of this.msegs) { if (py > top || py < bot - 1.5) continue;
       const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((pos.x - x1) * dx + (pos.z - z1) * dz) / l2));
@@ -388,15 +470,16 @@ export class Builder {
     if (open(0, i, j, i, j - 1) || open(0, i, j + 1, i, j + 1) || open(1, i, j, i - 1, j) || open(1, i + 1, j, i + 1, j)) return false;
     return true;
   }
-  inside(pos) { if (this.domeAt(pos.x, pos.z) && pos.y < (this.domeAt(pos.x, pos.z).y + 3)) return true; const m = this.modOfPos(pos.x, pos.z); if (m && pos.y > m.y - 0.3 && pos.y < m.y + MH) return true; return this.sealed(Math.floor(pos.x / G), Math.floor(pos.z / G)); }
+  inside(pos) { if (this.domeAt(pos.x, pos.z) && pos.y < (this.domeAt(pos.x, pos.z).y + 3)) return true; const m = this.modOfPos(pos.x, pos.z); if (m && pos.y > m.y - 0.3 && pos.y < m.y + MH) return true; const dk = this.dockAt(pos.x, pos.z); if (dk && pos.y < dk.D.y + 3) return true; return this.sealed(Math.floor(pos.x / G), Math.floor(pos.z / G)); }
   // Пол дома/модуля — по нему ходим (выше земли); у дверей модулей — пандус
   groundAt(x, z, fallback) {
     const D = this.domeAt(x, z, 0.5); if (D) return Math.max(fallback, D.y + 0.2);
     for (const D of this.domes) { const ox = x - (D.x + Math.cos(D.door) * D.r), oz = z - (D.z + Math.sin(D.door) * D.r), c = Math.cos(D.door), sn = Math.sin(D.door), along = ox * c + oz * sn, lat = Math.abs(-ox * sn + oz * c);
       if (along > -0.6 && along < 3 && lat < 1.1) { const top = D.y + 0.2; if (top > fallback) return Math.max(fallback, top - (top - this.g.world.heightAt(D.x + c * (D.r + 3), D.z + sn * (D.r + 3))) * Math.max(0, Math.min(1, along / 3))); } }
     const m = this.modOfPos(x, z); if (m) return Math.max(fallback, m.y + 0.25);
+    const dk = this.dockAt(x, z); if (dk) return Math.max(fallback, dk.D.y + 0.2);
     for (const q of this.g.state.modules) for (const s of q.doors || []) {
-      const f = sideFrame(s, q.i, q.j), ox = x - f.x, oz = z - f.z, d = ox * f.out[0] + oz * f.out[1], lat = Math.abs(ox * f.out[1] - oz * f.out[0]);
+      const f = sideFrame(s, q), ox = x - f.x, oz = z - f.z, d = ox * f.out[0] + oz * f.out[1], lat = Math.abs(ox * f.out[1] - oz * f.out[0]);
       if (d > 0 && d < 2.2 && lat < DOOR_W / 2 + 0.1) { const top = q.y + 0.25; if (top > fallback) return Math.max(fallback, top - (top - this.g.world.heightAt(f.x + f.out[0] * 2, f.z + f.out[1] * 2)) * Math.min(1, d / 2)); }
     }
     const f = this.floorAt(x, z); return f != null && f > fallback ? f : fallback;
@@ -410,10 +493,12 @@ export class Builder {
         gh.position.set(d.x, d.y, d.z); this.g.scene.add(gh); this.mode.ghost = gh; this.mode.why = this.domeOk(d); }
       const ok = !this.mode.why && this.g.has(this.P[this.mode.id].cost); this.mode.ghost.traverse(c => { if (c.isMesh) c.material.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); }); this.mode.ok = ok;
     } else if (this.mode && this.kind(this.mode.id) === 'module') {
-      const m = this.modTarget(), key = [m.i, m.j, m.y, m.doors[0], this.mode.id].join();
+      const m = this.modTarget(), key = [fkey(m.F), m.i, m.j, m.y, m.doors[0], this.mode.id].join();
       if (key !== this.mode.gk) { this.mode.gk = key; this.g.scene.remove(this.mode.ghost); const tmp = { ...m }; this.g.state.modules.push(tmp); const sides = this.sidesOf(tmp); this.g.state.modules.pop();
-        const gh = this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, sides, m.y - m.lo + 0.3) : makeModule(m.id, sides, m.y - m.lo + 0.3); gh.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.5; c.castShadow = false; } });
-        gh.position.set(m.i * M + M / 2, m.y, m.j * M + M / 2); this.g.scene.add(gh); this.mode.ghost = gh; this.mode.why = this.modOk(m); }
+        const gh = this.buildModule(m, sides, m.y - m.lo + 0.3); gh.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.5; c.castShadow = false; } });
+        // Стыковка — светящаяся рамка проёма на стене купола
+        if (m.dock) { const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.07, 6, 24), new THREE.MeshBasicMaterial({ color: '#5cd6a8', transparent: true, opacity: 0.9, depthTest: false })); ring.position.set(-M / 2 - 0.35, 1.3, 0); ring.rotation.y = Math.PI / 2; ring.scale.set(1, 1.25, 1); ring.renderOrder = 10; gh.add(ring); }
+        gh.position.set(m.cx, m.y, m.cz); gh.rotation.y = -(m.F?.a || 0); this.g.scene.add(gh); this.mode.ghost = gh; this.mode.why = this.modOk(m); this.mode.dock = !!m.dock; }
       const ok = !this.mode.why && this.g.has(this.P[m.id].cost); this.mode.ghost.traverse(c => { if (c.isMesh) c.material.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); }); this.mode.ok = ok;
     } else if (this.mode) {
       const p = this.target(), { x, z, rot } = p.x != null ? { x: p.x, z: p.z, rot: p.rot } : this.place(p);
@@ -425,7 +510,7 @@ export class Builder {
     for (const b of this.beacons) { const s = b.getObjectByName('spin'); if (s) s.rotation.y += dt * 1.5; const bm = b.getObjectByName('beam'); if (bm) { const st = this.g.explore?.storm || 0; bm.visible = st > 0.05; bm.material.opacity = (0.4 + Math.sin(performance.now() / 400) * 0.1) * Math.min(1, st * 2); } }
     // Двери модулей: створки разъезжаются, когда игрок рядом
     const P0 = this.g.player.pos;
-    for (const [, o] of this.mobjs) { const m = o.userData.m; for (const s of m.doors || []) { const side = o.getObjectByName('side' + s); if (!side) continue; const f = sideFrame(s, m.i, m.j), near = Math.hypot(P0.x - f.x, P0.z - f.z) < 2.8 && Math.abs(P0.y - m.y) < 2.5;
+    for (const [, o] of this.mobjs) { const m = o.userData.m; for (const s of m.doors || []) { const side = o.getObjectByName('side' + s); if (!side) continue; const f = sideFrame(s, m), near = Math.hypot(P0.x - f.x, P0.z - f.z) < 2.8 && Math.abs(P0.y - m.y) < 2.5;
       if (near !== !!side.userData.near) { side.userData.near = near; this.g.sfx?.play('door'); }
       side.userData.open = (side.userData.open || 0) + ((near ? 1 : 0) - (side.userData.open || 0)) * Math.min(1, dt * 7);
       for (const sg of [-1, 1]) { const d = side.getObjectByName('door' + sg); if (d) d.position.x = d.userData.x0 + sg * side.userData.open * (DOOR_W / 2 - 0.05); }
@@ -437,8 +522,10 @@ export class Builder {
     // В куполе — прячем оболочку (стекло, рёбра) этого купола, видно героя и обстановку
     for (const D of this.domes) { const sh = D.obj.getObjectByName('shell'); if (!sh) continue; const inD = Math.hypot(P0.x - D.x, P0.z - D.z) < D.r - 0.2 && P0.y < D.y + 4; if (sh.visible === inD) sh.visible = !inD; }
     // В модуле — прячем крыши всей связной постройки
-    const pm = this.modOfPos(P0.x, P0.z), mk = pm && P0.y < pm.y + MH ? 'M' + pm.i + ',' + pm.j : '';
-    if (mk !== this.mHidden) { this.mHidden = mk; const hide = new Set(); if (pm && mk) { const q = [pm]; hide.add(pm); while (q.length) { const c = q.pop(); for (const [a, b] of SIDES) { const n = this.modAt(c.i + a, c.j + b); if (n && !hide.has(n)) { hide.add(n); q.push(n); } } } }
+    // В модуле — или в куполе со стыковкой (через проём виден разрез пристыкованного модуля)
+    let pm = this.modOfPos(P0.x, P0.z); if (!pm || P0.y >= pm.y + MH) { const Din = this.domeAt(P0.x, P0.z, 0.5); pm = Din && P0.y < Din.y + 4 ? this.g.state.modules.find(m => this.domeOfDock(m) === Din) || null : this.dockAt(P0.x, P0.z)?.m || null; }
+    const mk = pm && P0.y < pm.y + MH ? this.mkey(pm) : '';
+    if (mk !== this.mHidden) { this.mHidden = mk; const hide = new Set(); if (pm && mk) { const q = [pm]; hide.add(pm); while (q.length) { const c = q.pop(); for (let s2 = 0; s2 < 4; s2++) { const n = this.nbOf(c, s2); if (n && !hide.has(n)) { hide.add(n); q.push(n); } } } }
       for (const [, o] of this.mobjs) { const h = hide.has(o.userData.m); const r = o.getObjectByName('roof'); if (r) r.visible = !h; const hr = o.getObjectByName('hullroof'); if (hr) hr.visible = !h; const cu = o.getObjectByName('cutaway'); if (cu) cu.visible = h; for (let s = 0; s < 4; s++) { const sd = o.getObjectByName('side' + s); if (sd && hr) sd.children.forEach(c => { if (!/^door/.test(c.name) && c.name !== 'doorlamp') c.visible = !h; }); } } }
     // Под крышей — крыши этого дома (связные ячейки) прячем, чтобы видеть героя внутри
     const pp = this.g.player.pos, ci = Math.floor(pp.x / G), cj = Math.floor(pp.z / G);

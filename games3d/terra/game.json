@@ -4,8 +4,8 @@
   "pitch": "Выживи на Марсе, добывай ресурсы, строй машины — и шаг за шагом превращай мёртвую планету в живой мир.",
   "world": {
     "_comment": "Мир — данные. Рантайм строит террейн, воду, зоны и объекты отсюда. Координаты в метрах, X вправо, Z вниз карты, Y вверх.",
-    "size": 400,
-    "segments": 320,
+    "size": 840,
+    "segments": 672,
     "seed": 7,
     "height": {
       "base_amp": 7,
@@ -27,6 +27,20 @@
         "r": 22,
         "h": 2.0,
         "_comment": "плато базы"
+      },
+      {
+        "x": -205,
+        "z": -170,
+        "r": 42,
+        "h": null,
+        "lm": "geo_station"
+      },
+      {
+        "x": 255,
+        "z": -250,
+        "r": 24,
+        "h": null,
+        "_comment": "хаб станции"
       }
     ],
     "features": [
@@ -120,6 +134,79 @@
         "r": 11,
         "h": 12,
         "gap": 1.5707963267948966
+      },
+      {
+        "type": "shield",
+        "id": "olympus",
+        "name": "Вулкан Олимп",
+        "region": true,
+        "biome": "basalt",
+        "biome_r": 1.12,
+        "x": -255,
+        "z": -245,
+        "r": 150,
+        "h": 70,
+        "cr": 26,
+        "cd": 26
+      },
+      {
+        "type": "pit",
+        "id": "lava_tube",
+        "name": "Провал лавовой трубки",
+        "region": false,
+        "x": -200,
+        "z": -185,
+        "r": 7,
+        "depth": 16
+      },
+      {
+        "type": "icecap",
+        "id": "polar_cap",
+        "name": "Полярная шапка",
+        "region": true,
+        "biome": "ice",
+        "x": 255,
+        "z": -250,
+        "rx": 120,
+        "rz": 105,
+        "h": 12
+      },
+      {
+        "type": "dunes",
+        "id": "dark_dunes",
+        "name": "Море тёмных дюн",
+        "region": true,
+        "biome": "darksand",
+        "x": 265,
+        "z": 260,
+        "rx": 120,
+        "rz": 115,
+        "wl": 30,
+        "a": 7
+      },
+      {
+        "type": "geode",
+        "id": "geode",
+        "name": "Кристальная жеода",
+        "region": true,
+        "biome": "crystal",
+        "biome_r": 1.6,
+        "x": -260,
+        "z": 265,
+        "r": 62,
+        "h": 34,
+        "depth": 8,
+        "gap": -0.785
+      },
+      {
+        "type": "pit",
+        "id": "ice_shaft",
+        "name": "Ледяная шахта",
+        "region": false,
+        "x": 292,
+        "z": -172,
+        "r": 12,
+        "depth": 22
       }
     ],
     "water": {
@@ -214,6 +301,36 @@
         "res": "res_iron",
         "count": 3,
         "bias": "near:6:12:-4:4"
+      },
+      "res_sulfur": {
+        "count": 34,
+        "bias": "feat:olympus"
+      },
+      "res_obsidian": {
+        "count": 18,
+        "bias": "feat:olympus"
+      },
+      "res_dryice": {
+        "count": 36,
+        "bias": "feat:polar_cap"
+      },
+      "res_magnetite": {
+        "count": 32,
+        "bias": "feat:dark_dunes"
+      },
+      "res_geode": {
+        "count": 16,
+        "bias": "feat:geode"
+      },
+      "res_titanium@polar": {
+        "res": "res_titanium",
+        "count": 8,
+        "bias": "feat:polar_cap"
+      },
+      "res_cobalt@geode": {
+        "res": "res_cobalt",
+        "count": 8,
+        "bias": "feat:geode"
       }
     },
     "decor": {
@@ -374,6 +491,517 @@
         },
         "tilt": -0.15
       }
+    ],
+    "core": 400,
+    "edge_from": 0.84,
+    "edge_h": 38,
+    "lod_dist": [
+      140,
+      320
+    ],
+    "landmarks": [
+      {
+        "id": "geo_station",
+        "model": "lm_geo",
+        "x": -205,
+        "z": -170,
+        "size": 40,
+        "rot": 1.57,
+        "name": "Геостанция «Гефест»",
+        "table": "lm_geo",
+        "r": 20,
+        "sink": 7.5,
+        "fx": {
+          "lights": [
+            [
+              -1.45,
+              8.1,
+              -2.06,
+              "#ff3020"
+            ],
+            [
+              0.84,
+              8.1,
+              -2.18,
+              "#ff3020"
+            ]
+          ],
+          "steam": [
+            [
+              -1.45,
+              8.2,
+              -2.06
+            ],
+            [
+              0.84,
+              8.2,
+              -2.18
+            ]
+          ],
+          "glow": [
+            [
+              0,
+              2.4,
+              2.6,
+              "#ff8a20",
+              9
+            ]
+          ]
+        },
+        "interior": {
+          "y0": 0,
+          "path": 6,
+          "path0": 6,
+          "hull": [
+            [
+              -9,
+              -13,
+              17,
+              -13
+            ],
+            [
+              17,
+              -13,
+              17,
+              13
+            ],
+            [
+              17,
+              13,
+              6.3,
+              13
+            ],
+            [
+              1.7,
+              13,
+              -9,
+              13
+            ],
+            [
+              -9,
+              13,
+              -9,
+              -13
+            ]
+          ],
+          "hullTop": 7.5,
+          "entry": [
+            4,
+            13,
+            3,
+            3.2
+          ],
+          "under": "#ff6a10",
+          "rooms": [
+            {
+              "name": "коридор",
+              "box": [
+                4,
+                11,
+                3.4,
+                4,
+                4,
+                0.2
+              ],
+              "doors": [
+                {
+                  "side": "n",
+                  "at": 0,
+                  "w": 2.6
+                },
+                {
+                  "side": "s",
+                  "at": 0,
+                  "w": 2.6
+                }
+              ],
+              "lightI": 25
+            },
+            {
+              "name": "машинный зал",
+              "box": [
+                4,
+                2,
+                16,
+                14,
+                9,
+                0.45
+              ],
+              "under": true,
+              "underY": 0.35,
+              "doors": [
+                {
+                  "side": "s",
+                  "at": 0,
+                  "w": 2.8,
+                  "h": 3.2
+                },
+                {
+                  "side": "e",
+                  "at": 1,
+                  "w": 2.6
+                }
+              ],
+              "lightI": 70,
+              "light": "#ffd29a"
+            },
+            {
+              "name": "балкон",
+              "deck": true,
+              "box": [
+                4,
+                -3,
+                16,
+                4,
+                0,
+                5
+              ],
+              "rails": [
+                [
+                  -4,
+                  -1,
+                  8.8,
+                  -1
+                ]
+              ],
+              "posts": [
+                [
+                  -3.5,
+                  -1.2
+                ],
+                [
+                  2,
+                  -1.2
+                ],
+                [
+                  7.5,
+                  -1.2
+                ]
+              ]
+            },
+            {
+              "name": "насосная",
+              "box": [
+                14.5,
+                3,
+                5,
+                8,
+                4,
+                0.45
+              ],
+              "doors": [
+                {
+                  "side": "w",
+                  "at": 0,
+                  "w": 2.6
+                }
+              ],
+              "lightI": 30,
+              "light": "#9ad8ff"
+            },
+            {
+              "name": "крыша",
+              "outdoor": true,
+              "box": [
+                4,
+                3,
+                12,
+                12,
+                0,
+                12.3
+              ]
+            },
+            {
+              "name": "площадка",
+              "outdoor": true,
+              "slab": true,
+              "box": [
+                -12,
+                1.5,
+                3,
+                4,
+                0,
+                6.2
+              ],
+              "rails": [
+                [
+                  -13.5,
+                  -0.5,
+                  -13.5,
+                  3.5
+                ]
+              ]
+            }
+          ],
+          "ramps": [
+            {
+              "p": [
+                10.5,
+                7.5,
+                0.45,
+                10.5,
+                -0.9,
+                5,
+                2
+              ]
+            },
+            {
+              "p": [
+                -12,
+                16,
+                0,
+                -12,
+                3.5,
+                6.2,
+                2.2
+              ],
+              "out": true
+            },
+            {
+              "p": [
+                -10.5,
+                1,
+                6.2,
+                -1.5,
+                1,
+                12.3,
+                2.2
+              ],
+              "out": true
+            }
+          ],
+          "items": [
+            {
+              "kind": "crate",
+              "id": "c1",
+              "at": [
+                9,
+                0.45,
+                7.5
+              ],
+              "table": "station",
+              "name": "Гефест: ящик"
+            },
+            {
+              "kind": "crate",
+              "id": "c2",
+              "at": [
+                11,
+                5,
+                -4.2
+              ],
+              "table": "lm_geo",
+              "name": "Гефест: склад",
+              "model": "chest"
+            },
+            {
+              "kind": "crate",
+              "id": "c3",
+              "at": [
+                13.2,
+                0.45,
+                0.2
+              ],
+              "table": "station",
+              "name": "Гефест: насосная"
+            },
+            {
+              "kind": "crate",
+              "id": "b1",
+              "at": [
+                -2,
+                0.45,
+                7
+              ],
+              "table": "body",
+              "name": "Пропавший космонавт",
+              "model": "suit_body",
+              "rot": 1.2
+            },
+            {
+              "kind": "crate",
+              "id": "b2",
+              "at": [
+                -2.5,
+                5,
+                -3.5
+              ],
+              "table": "body",
+              "name": "Пропавший космонавт",
+              "model": "suit_body",
+              "rot": 4
+            },
+            {
+              "kind": "crate",
+              "id": "c4",
+              "at": [
+                16,
+                0.45,
+                6
+              ],
+              "table": "lm_geo",
+              "name": "Гефест: сейф",
+              "model": "chest"
+            }
+          ]
+        }
+      },
+      {
+        "id": "colony_ship",
+        "model": "lm_ship",
+        "x": 265,
+        "z": 255,
+        "size": 46,
+        "rot": -0.5,
+        "name": "Корабль колонистов «Ковчег»",
+        "table": "lm_ship",
+        "r": 26
+      },
+      {
+        "id": "crystal_heart",
+        "model": "lm_crystal",
+        "x": -260,
+        "z": 265,
+        "size": 30,
+        "rot": 0.3,
+        "name": "Сердце жеоды",
+        "table": "lm_crystal",
+        "r": 18,
+        "tall": 1.4
+      }
+    ],
+    "region_decor": [
+      {
+        "model": "res_obsidian",
+        "feat": "olympus",
+        "count": 60,
+        "scale": [
+          2.5,
+          6
+        ],
+        "solid": 0.5,
+        "sink": 0.3
+      },
+      {
+        "model": "boulder",
+        "feat": "olympus",
+        "count": 50,
+        "scale": [
+          1.5,
+          4
+        ],
+        "solid": 0.8
+      },
+      {
+        "model": "res_sulfur",
+        "feat": "olympus",
+        "count": 25,
+        "scale": [
+          1.5,
+          3
+        ]
+      },
+      {
+        "model": "ice_wall",
+        "feat": "polar_cap",
+        "count": 110,
+        "scale": [
+          1.8,
+          4.5
+        ],
+        "solid": 0.9,
+        "sink": 0.6,
+        "tilt": 0.25
+      },
+      {
+        "model": "res_dryice",
+        "feat": "polar_cap",
+        "count": 40,
+        "scale": [
+          2,
+          4
+        ]
+      },
+      {
+        "model": "boulder",
+        "feat": "dark_dunes",
+        "count": 35,
+        "scale": [
+          2,
+          5
+        ],
+        "solid": 0.8,
+        "sink": 0.5
+      },
+      {
+        "model": "res_magnetite",
+        "feat": "dark_dunes",
+        "count": 40,
+        "scale": [
+          2,
+          4.5
+        ],
+        "solid": 0.5
+      },
+      {
+        "model": "res_geode",
+        "feat": "geode",
+        "count": 90,
+        "scale": [
+          3,
+          9
+        ],
+        "solid": 0.6,
+        "sink": 0.4,
+        "tilt": 0.5
+      },
+      {
+        "model": "res_crystal",
+        "feat": "geode",
+        "count": 40,
+        "scale": [
+          2,
+          4
+        ]
+      },
+      {
+        "model": "res_cobalt",
+        "feat": "geode",
+        "count": 30,
+        "scale": [
+          2,
+          5
+        ],
+        "tilt": 0.4
+      }
+    ],
+    "keepout": [
+      {
+        "x": 255,
+        "z": -250,
+        "r": 62,
+        "_comment": "блокинг: кольцевая станция"
+      },
+      {
+        "x": 292,
+        "z": -172,
+        "r": 22,
+        "_comment": "блокинг: шахта"
+      }
+    ],
+    "no_drive": [
+      {
+        "x": -255,
+        "z": -245,
+        "r": 35,
+        "_comment": "кальдера Олимпа — не выехать"
+      },
+      {
+        "x": 292,
+        "z": -172,
+        "r": 17,
+        "_comment": "ледяная шахта"
+      }
     ]
   },
   "terraform": {
@@ -409,7 +1037,7 @@
           "#e0875a"
         ],
         "fog": "#c46a45",
-        "fog_density": 0.014,
+        "fog_density": 0.0062,
         "sun": "#ffc890",
         "ground": [
           "#d9925c",
@@ -428,7 +1056,7 @@
           "#f2b48a"
         ],
         "fog": "#d9a088",
-        "fog_density": 0.0085,
+        "fog_density": 0.0045,
         "sun": "#fff4e0",
         "ground": [
           "#c98a5a",
@@ -447,7 +1075,7 @@
           "#d6d8d6"
         ],
         "fog": "#c8c0b4",
-        "fog_density": 0.007,
+        "fog_density": 0.004,
         "sun": "#fff6e8",
         "ground": [
           "#c98a5a",
@@ -466,7 +1094,7 @@
           "#c6dcef"
         ],
         "fog": "#b9c9d6",
-        "fog_density": 0.006,
+        "fog_density": 0.0036,
         "sun": "#ffffff",
         "ground": [
           "#b48558",
@@ -485,7 +1113,7 @@
           "#bcd8f2"
         ],
         "fog": "#b2cbe0",
-        "fog_density": 0.005,
+        "fog_density": 0.0032,
         "sun": "#fff3dd",
         "ground": [
           "#7d7048",
@@ -504,7 +1132,7 @@
           "#b4d6f5"
         ],
         "fog": "#a9c8e2",
-        "fog_density": 0.004,
+        "fog_density": 0.0028,
         "sun": "#fff1d0",
         "ground": [
           "#6f7a46",
@@ -857,6 +1485,47 @@
       "rarity": "epic",
       "desc": "Вездеход: быстрее ходьбы в 3 раза, внутри не тратится O₂",
       "bp": "rover:1"
+    },
+    "sulfur": {
+      "name": "Сера",
+      "color": "#f2d23c",
+      "from": "res_sulfur",
+      "rarity": "uncommon",
+      "desc": "С фумарол Олимпа. Для геотермальной станции и мощного обогрева"
+    },
+    "obsidian": {
+      "name": "Обсидиан",
+      "color": "#3a2f4a",
+      "from": "res_obsidian",
+      "rarity": "rare",
+      "desc": "Вулканическое стекло. Для купольного стекла и линз"
+    },
+    "dry_ice": {
+      "name": "Сухой лёд",
+      "color": "#dff4ff",
+      "from": "res_dryice",
+      "rarity": "uncommon",
+      "desc": "Замёрзший CO₂ полярной шапки. Выпаривается в атмосферу — растёт давление"
+    },
+    "magnetite": {
+      "name": "Магнетит",
+      "color": "#4b4f5c",
+      "from": "res_magnetite",
+      "rarity": "uncommon",
+      "desc": "Магнитная руда тёмных дюн. Для электромагнитов и ветряков"
+    },
+    "geode_crystal": {
+      "name": "Кристалл жеоды",
+      "color": "#c07bff",
+      "from": "res_geode",
+      "rarity": "epic",
+      "desc": "Огромные кристаллы жеоды. Для высших тиров снаряжения и кристальной линзы"
+    },
+    "bp_rover_2": {
+      "name": "Чертёж: Марсоход II",
+      "rarity": "epic",
+      "bp": "rover2:1",
+      "desc": "Мощнее мотор, лучше держит склоны"
     }
   },
   "recipes": [
@@ -1190,6 +1859,90 @@
       "needs_bp": "rover",
       "vehicle": true,
       "desc": "садись — E. Скорость ×3, O₂ внутри не тратится"
+    },
+    {
+      "id": "geo_plant",
+      "name": "Геотермальный генератор",
+      "build": "heater_t2",
+      "cost": {
+        "sulfur": 6,
+        "obsidian": 2,
+        "titanium": 4,
+        "iron": 10
+      },
+      "time": 0,
+      "tier": 2,
+      "unlock_ti": 60,
+      "gives": {
+        "heat": 0.22
+      },
+      "desc": "Тепло из недр. ×9 к обогревателю"
+    },
+    {
+      "id": "co2_vent",
+      "name": "Испаритель сухого льда",
+      "build": "drill_t2",
+      "cost": {
+        "dry_ice": 8,
+        "iron": 8,
+        "silicon": 4
+      },
+      "time": 0,
+      "tier": 2,
+      "unlock_ti": 12,
+      "gives": {
+        "pressure": 0.18
+      },
+      "desc": "Выпускает CO₂ — растёт давление"
+    },
+    {
+      "id": "wind_turbine",
+      "name": "Ветряк",
+      "build": "drill",
+      "cost": {
+        "magnetite": 5,
+        "iron": 8,
+        "silicon": 3
+      },
+      "time": 0,
+      "tier": 1,
+      "gives": {
+        "heat": 0.04,
+        "pressure": 0.04
+      },
+      "desc": "Работает от бурь, понемногу греет и сжимает"
+    },
+    {
+      "id": "crystal_lens",
+      "name": "Кристальная линза",
+      "build": "oxygen_t2",
+      "cost": {
+        "geode_crystal": 3,
+        "obsidian": 3,
+        "silicon": 8
+      },
+      "time": 0,
+      "tier": 3,
+      "unlock_ti": 180,
+      "gives": {
+        "oxygen": 0.25,
+        "heat": 0.1
+      },
+      "desc": "Фокусирует свет: кислород и тепло"
+    },
+    {
+      "id": "rover2",
+      "name": "Марсоход II",
+      "cost": {
+        "magnetite": 6,
+        "titanium": 4,
+        "cobalt": 3
+      },
+      "time": 10,
+      "tier": 2,
+      "needs_bp": "rover2",
+      "upgrade": "rover2",
+      "desc": "Апгрейд всех марсоходов: мощнее мотор, лучше держит склоны"
     }
   ],
   "monetization": {
@@ -1248,23 +2001,6 @@
     },
     "iap": [
       {
-        "id": "starter_pack",
-        "title": "Набор колониста",
-        "desc": "Бур T2 (x2 скорость добычи), 3 баллона O₂, 20 железа",
-        "price": "79 ₽",
-        "once": true,
-        "grant": {
-          "flags": [
-            "fast_mine"
-          ],
-          "items": {
-            "o2_tank": 3,
-            "iron": 20
-          }
-        },
-        "best": true
-      },
-      {
         "id": "big_backpack",
         "title": "Большой рюкзак",
         "desc": "+4 слота к любому рюкзаку",
@@ -1274,15 +2010,6 @@
           "flags": [
             "big_backpack"
           ]
-        }
-      },
-      {
-        "id": "ti_boost",
-        "title": "Солнечное зеркало",
-        "desc": "x2 скорость терраформирования на 30 мин",
-        "price": "49 ₽",
-        "grant": {
-          "boost_ti_sec": 1800
         }
       },
       {
@@ -1298,21 +2025,9 @@
         }
       },
       {
-        "id": "suit_gold",
-        "title": "Скафандр «Золотой век»",
-        "desc": "Косметика: золотой скафандр",
-        "price": "59 ₽",
-        "once": true,
-        "grant": {
-          "flags": [
-            "suit_gold"
-          ]
-        }
-      },
-      {
         "id": "tribe_pack",
         "title": "Набор вождя",
-        "desc": "Автокормушки навсегда + 120 💎 + редкая черта при следующем вылуплении",
+        "desc": "Автокормушки навсегда + редкая черта при следующем вылуплении",
         "price": "149 ₽",
         "once": true,
         "best": true,
@@ -1320,8 +2035,7 @@
           "flags": [
             "auto_feeder",
             "rare_next"
-          ],
-          "crystals": 120
+          ]
         },
         "life": true
       },
@@ -1349,33 +2063,6 @@
         "life": true
       },
       {
-        "id": "crystals_s",
-        "title": "Горсть кристаллов",
-        "desc": "60 💎",
-        "price": "39 ₽",
-        "grant": {
-          "crystals": 60
-        }
-      },
-      {
-        "id": "crystals_m",
-        "title": "Мешок кристаллов",
-        "desc": "200 💎 (+25%)",
-        "price": "99 ₽",
-        "grant": {
-          "crystals": 200
-        }
-      },
-      {
-        "id": "crystals_l",
-        "title": "Сундук кристаллов",
-        "desc": "700 💎 (+50%)",
-        "price": "299 ₽",
-        "grant": {
-          "crystals": 700
-        }
-      },
-      {
         "id": "outfits",
         "title": "Наряды племени",
         "desc": "Праздничные туники для кошкодевочек",
@@ -1387,6 +2074,24 @@
           ]
         },
         "life": true
+      }
+    ],
+    "soon": [
+      {
+        "title": "Скины марсохода",
+        "desc": "раскраски и обвесы для марсохода"
+      },
+      {
+        "title": "Облики астронавта",
+        "desc": "новые скафандры"
+      },
+      {
+        "title": "Стили планеты",
+        "desc": "другие оттенки неба, грунта и льда"
+      },
+      {
+        "title": "Новые локации",
+        "desc": "дальние регионы для вылазок"
       }
     ]
   },
@@ -1428,7 +2133,9 @@
     "open": "Открыть",
     "chest": "Сундук",
     "stash": "Ящик",
-    "stash_tip": "Рюкзак полон! Сложи лишнее в сундук в куполе — подойди к нему и нажми E. Крафт берёт ресурсы и из сундуков базы."
+    "stash_tip": "Рюкзак полон! Сложи лишнее в сундук в куполе — подойди к нему и нажми E. Крафт берёт ресурсы и из сундуков базы.",
+    "gate_heat_how": "Как растопить: строй обогреватели (Крафт C → Базовые машины) — каждый поднимает Тепло. Чем больше машин, тем быстрее.",
+    "gate_pressure_how": "Как пройти: строй буры-испарители (Крафт C → Базовые машины) — они поднимают Давление, буря утихнет."
   },
   "build_cost_growth": 1.3,
   "evolution": {
@@ -2225,6 +2932,187 @@
             1
           ]
         ]
+      },
+      "lm_geo": {
+        "rolls": [
+          3,
+          5
+        ],
+        "slots": 10,
+        "guaranteed": [
+          "sulfur"
+        ],
+        "entries": [
+          [
+            "sulfur",
+            3,
+            6,
+            5
+          ],
+          [
+            "obsidian",
+            1,
+            3,
+            3
+          ],
+          [
+            "titanium",
+            2,
+            5,
+            4
+          ],
+          [
+            "data_core",
+            1,
+            2,
+            3
+          ],
+          [
+            "bp_suit_4",
+            1,
+            1,
+            0.8
+          ],
+          [
+            "bp_jet_2",
+            1,
+            1,
+            0.6
+          ]
+        ]
+      },
+      "lm_ice": {
+        "rolls": [
+          3,
+          4
+        ],
+        "slots": 10,
+        "guaranteed": [
+          "dry_ice"
+        ],
+        "entries": [
+          [
+            "dry_ice",
+            3,
+            6,
+            5
+          ],
+          [
+            "ice",
+            4,
+            8,
+            5
+          ],
+          [
+            "astro",
+            1,
+            2,
+            2
+          ],
+          [
+            "bp_backpack_4",
+            1,
+            1,
+            0.8
+          ],
+          [
+            "bp_tool_4",
+            1,
+            1,
+            0.8
+          ]
+        ]
+      },
+      "lm_ship": {
+        "rolls": [
+          4,
+          6
+        ],
+        "slots": 12,
+        "guaranteed": [
+          "bp_rover_2"
+        ],
+        "entries": [
+          [
+            "magnetite",
+            2,
+            5,
+            4
+          ],
+          [
+            "scrap",
+            4,
+            10,
+            6
+          ],
+          [
+            "data_core",
+            2,
+            3,
+            4
+          ],
+          [
+            "seeds",
+            3,
+            6,
+            4
+          ],
+          [
+            "o2_tank",
+            2,
+            3,
+            4
+          ],
+          [
+            "bp_backpack_5",
+            1,
+            1,
+            0.5
+          ],
+          [
+            "bp_suit_5",
+            1,
+            1,
+            0.5
+          ]
+        ]
+      },
+      "lm_crystal": {
+        "rolls": [
+          3,
+          4
+        ],
+        "slots": 10,
+        "guaranteed": [
+          "geode_crystal",
+          "star_core"
+        ],
+        "entries": [
+          [
+            "geode_crystal",
+            2,
+            4,
+            5
+          ],
+          [
+            "astro",
+            2,
+            4,
+            4
+          ],
+          [
+            "cobalt",
+            2,
+            4,
+            3
+          ],
+          [
+            "bp_jet_3",
+            1,
+            1,
+            0.6
+          ]
+        ]
       }
     }
   },
@@ -2683,7 +3571,7 @@
     },
     {
       "id": "heater",
-      "text": "Построй нагреватель",
+      "text": "Построй обогреватель",
       "hint": "Крафт (C) → Базовые машины",
       "event": "build",
       "reward": {},
@@ -2696,7 +3584,7 @@
     {
       "id": "drill",
       "text": "Построй бур",
-      "hint": "нужен лёд",
+      "hint": "Крафт (C) → Базовые машины, нужен лёд",
       "event": "build",
       "reward": {},
       "xp": 15,
@@ -2708,7 +3596,7 @@
     {
       "id": "module",
       "text": "Пристрой модуль",
-      "hint": "Стройка (B) → Модули — ставь вплотную к стене, R меняет сторону двери",
+      "hint": "Стройка (B) → Модули. Поставишь у стены купола — модуль пристроится к базе. Поставишь в стороне — получится аванпост: внутри пополняется кислород, и от него можно уходить дальше даже без марсохода",
       "event": "house",
       "reward": {},
       "xp": 15,
@@ -2728,7 +3616,7 @@
     {
       "id": "meteor",
       "text": "Найди упавший метеорит",
-      "hint": "увидел хвост в небе — беги туда и осмотри ядро (E)",
+      "hint": "увидел хвост в небе — беги к месту падения и подойди к ядру",
       "event": "meteor_touch",
       "reward": {},
       "xp": 20
@@ -2785,7 +3673,14 @@
         ],
         "grip": 0.15
       },
-      "seat_x": 0.2
+      "seat_x": 0.2,
+      "upg": {
+        "rover2": {
+          "engine": 1.45,
+          "maxSpeed": 1.25,
+          "climb_deg": 6
+        }
+      }
     }
   },
   "daily_calendar": [

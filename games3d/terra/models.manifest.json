@@ -491,6 +491,56 @@
         2.8
       ],
       "desc": "Марсоход на 6 колёсах (заглушка до GLB из Tripo)"
+    },
+    {
+      "id": "res_sulfur",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "desc": "Сера на тёмном камне",
+      "procedural_only": true
+    },
+    {
+      "id": "res_obsidian",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "desc": "Обсидиановые сколы",
+      "procedural_only": true
+    },
+    {
+      "id": "res_dryice",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "desc": "Глыбы сухого льда",
+      "procedural_only": true
+    },
+    {
+      "id": "res_magnetite",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "desc": "Магнетит",
+      "procedural_only": true
+    },
+    {
+      "id": "res_geode",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "desc": "Кристалл жеоды",
+      "procedural_only": true
     }
   ],
   "characters": {
@@ -633,6 +683,20 @@
       "sink": 0,
       "outline": 0.04,
       "rotY": 0
+    },
+    {
+      "id": "lm_geo",
+      "glb": "assets/lm_geo.glb",
+      "size": 10,
+      "outline": 0.012,
+      "sink": 0.3
+    },
+    {
+      "id": "lm_pod",
+      "glb": "assets/lm_pod.glb",
+      "size": 10,
+      "outline": 0.01,
+      "sink": 0.2
     }
   ]
 }

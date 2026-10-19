@@ -164,7 +164,8 @@ export class Player {
         q.userData.v = down.clone().multiplyScalar(4 + Math.random() * 4).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 1.5, (Math.random() - 0.5) * 4)); q.userData.life = 0.25 + Math.random() * 0.35; q.visible = true; }
       for (const q of fx.sparks) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.y -= dt * 6; q.rotation.x += dt * 20; q.material.opacity = Math.min(1, q.userData.life * 4); if (q.userData.life <= 0) q.visible = false; } }
   }
-  addSolid(x, z, r) { this.solids.push({ x, z, r }); }
+  addSolid(x, z, r) { const s = { x, z, r }; this.solids.push(s); const C = 16, k = Math.floor(x / C) + ',' + Math.floor(z / C); ((this.solidGrid ||= new Map()).get(k) || this.solidGrid.set(k, []).get(k)).push(s); if (r > C / 2) (this.bigSolids ||= []).push(s); }
+  nearSolids(x, z) { const C = 16, i = Math.floor(x / C), j = Math.floor(z / C), out = this.bigSolids ? this.bigSolids.slice() : []; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const L = this.solidGrid?.get((i + a) + ',' + (j + b)); if (L) for (const s of L) if (s.r <= C / 2) out.push(s); } return out; }
 
   // Поза сидя (вождение): после idle разворачиваем кости ног в мировых направлениях — бедро вперёд, голень вниз (не зависит от осей рига)
   sitPose(c) {
@@ -241,7 +242,7 @@ export class Player {
       if (steep) { const sx = this.pos.x + wish.x * sp * dt, sz = this.pos.z + wish.z * sp * dt; const dxOk = Math.abs(wish.x) > 0.3 && !(gAt(sx + Math.sign(wish.x) * 0.45, this.pos.z) - this.pos.y > 0.5), dzOk = Math.abs(wish.z) > 0.3 && !(gAt(this.pos.x, sz + Math.sign(wish.z) * 0.45) - this.pos.y > 0.5); mx = dxOk ? sx : this.pos.x; mz = dzOk ? sz : this.pos.z; }
       if ((!steep || mx !== this.pos.x || mz !== this.pos.z) && !gate) {
         let px = mx, pz = mz;
-        for (const s of this.solids) {
+        for (const s of this.nearSolids(px, pz)) {
           const dx = px - s.x, dz = pz - s.z, d = Math.hypot(dx, dz), r = s.r + 0.35;
           if (d < r && d > 0.0001) { px = s.x + dx / d * r; pz = s.z + dz / d * r; }
         }
@@ -260,14 +261,24 @@ export class Player {
     const JM = this.jetFuelMax || 0, JH = this.cfg.jet_height || 3;
     if (this.grounded) { this.baseY = this.pos.y; this.jetFuel = Math.min(JM, (this.jetFuel ?? JM) + dt * Math.max(1, JM)); }
     else if (this.baseY == null) this.baseY = this.pos.y;
-    const ceilY = (this.baseY ?? this.pos.y) + JH;
-    this.jetting = !this.grounded && JM > 0 && (inp.keys.Space || inp.jetHeld) && this.jetFuel > 0;
+    const free = !!this.devJet;   // дев: без потолка и без расхода топлива
+    const ceilY = free ? Infinity : (this.baseY ?? this.pos.y) + JH;
+    this.jetting = !this.grounded && (JM > 0 || free) && (inp.keys.Space || inp.jetHeld) && (this.jetFuel > 0 || free);
     if (this.jetting) {
       this.jetUsed = true;   // в этом прыжке был джетпак — урона от падения не будет
-      this.jetFuel = Math.max(0, this.jetFuel - dt);
-      const want = Math.min(7, Math.max(0, (ceilY - this.pos.y) * 4));     // к потолку — плавно, у потолка — висим
+      if (!free) this.jetFuel = Math.max(0, this.jetFuel - dt);
+      // Shift выше 2 м над землёй — полёт вперёд: тяга уходит в горизонталь, высота держится
+      const hAbove = this.pos.y - ground; this.gliding = inp.run && hAbove > 2;
+      const want = this.gliding ? Math.max(-1.5, (Math.min(this.pos.y, ceilY) - this.pos.y) * 2) : free ? 16 : Math.min(7, Math.max(0, (ceilY - this.pos.y) * 4));     // к потолку — плавно, у потолка — висим
       this.vel.y += (want - this.vel.y) * Math.min(1, dt * 8) + this.cfg.gravity * dt;
     }
+    if (!this.jetting) this.gliding = false;
+    { const G = (this.devJet ? 26 : 14) * (this.gliding ? 1 : 0), dir = amt > 0.05 ? wish : fwd;
+      this.glideV ||= new THREE.Vector3();
+      if (this.gliding) { this.glideV.lerp(dir.clone().setY(0).normalize().multiplyScalar(G), Math.min(1, dt * 2.5)); this.facing = Math.atan2(this.glideV.x, this.glideV.z); }
+      else this.glideV.multiplyScalar(this.grounded ? 0 : Math.max(0, 1 - dt * 1.5));
+      if (this.glideV.lengthSq() > 0.01) { const nx = this.pos.x + this.glideV.x * dt, nz = this.pos.z + this.glideV.z * dt, lim = this.world.half * 0.86;
+        if (!this.world.blocked(nx, nz) && this.world.heightAt(nx, nz) < this.pos.y + 0.3) { this.pos.x = THREE.MathUtils.clamp(nx, -lim, lim); this.pos.z = THREE.MathUtils.clamp(nz, -lim, lim); } else this.glideV.set(0, 0, 0); } }
     this.vel.y -= this.cfg.gravity * dt;
     this.pos.y += this.vel.y * dt;
     const ceil = this.ceilAt?.(this.pos.x, this.pos.z, this.pos.y); if (ceil != null && this.pos.y + 1.75 > ceil) { this.pos.y = ceil - 1.75; if (this.vel.y > 0) this.vel.y = 0; }
@@ -323,6 +334,8 @@ export class Player {
     const cp = target.clone().add(new THREE.Vector3(Math.sin(this.yaw) * Math.cos(pc), Math.sin(pc), Math.cos(this.yaw) * Math.cos(pc)).multiplyScalar(dist));
     const gh = this.world.heightAt(cp.x, cp.z) + 0.6;
     if (cp.y < gh) cp.y = gh;
+    // В помещении: камера не выходит за стены/потолок зала (подтягиваем к герою)
+    if (this.camClamp) { const c = this.camClamp(target, cp); if (c) cp.copy(c); }
     camera.position.lerp(cp, Math.min(1, dt * (this.driving ? 30 : 10)));
     // взгляд: цель поднимается вверх над героем пропорционально наклону
     if (low > 0) {

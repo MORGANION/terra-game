@@ -46,18 +46,19 @@ export class VehicleBody {
     this.steerVis = (this.steerVis || 0) + (-steer - (this.steerVis || 0)) * Math.min(1, dt * 8);   // визуальный поворот передних колёс
     const vF = this.vel.dot(fwd), cosClimb = Math.cos(C.climb_deg * Math.PI / 180), cosSlide = Math.cos(C.slide_deg * Math.PI / 180);
     let contacts = 0, traction = 0;
-    const nTouch = Math.max(2, C.wheels.reduce((n, [wx, wz]) => { const hb = new V3(wx, C.wheelR, wz).applyQuaternion(q).add(this.pos); return n + (hb.clone().addScaledVector(up, C.travel).y - C.wheelR - g.groundY(hb.x, hb.z) < C.travel + C.sag ? 1 : 0); }, 0));
-    const big = smoothN(W, this.pos.x, this.pos.z, 2.2), bigY = Math.min(big.y, up.y + 0.02);   // крутизна места: наклон машины и большой нормали
+    const nTouch = Math.max(2, C.wheels.reduce((n, [wx, wz]) => { const hb = new V3(wx, C.wheelR, wz).applyQuaternion(q).add(this.pos); return n + (hb.clone().addScaledVector(up, C.travel).y - C.wheelR - g.groundY(hb.x, hb.z, hb.y) < C.travel + C.sag ? 1 : 0); }, 0));
+    const GN = (x, z, e, ref) => new V3(g.groundY(x - e, z, ref) - g.groundY(x + e, z, ref), 2 * e, g.groundY(x, z - e, ref) - g.groundY(x, z + e, ref)).normalize();
+    const big = GN(this.pos.x, this.pos.z, 2.2, this.pos.y), bigY = Math.min(big.y, up.y + 0.02);   // крутизна места: наклон машины и большой нормали
     const slopeK = THREE.MathUtils.clamp((bigY - cosSlide) / (cosClimb - cosSlide), 0, 1);
     C.wheels.forEach(([wx, wz], i) => {
       const hub = new V3(wx, C.wheelR, wz).applyQuaternion(q).add(this.pos);
       const top = hub.clone().addScaledVector(up, C.travel);
-      const gh = g.groundY(hub.x, hub.z);
+      const gh = g.groundY(hub.x, hub.z, hub.y);
       const L = top.y - C.wheelR - gh;                          // длина пружины до грунта (вертикальный луч)
       const Lrest = C.travel + C.sag, c = Lrest - L;
       if (c <= 0) { this.wheelsY[i] += (-0.15 - this.wheelsY[i]) * Math.min(1, dt * 12); return; }
       contacts++;
-      const nrm = smoothN(W, hub.x, hub.z);
+      const nrm = GN(hub.x, hub.z, 1.1, hub.y);
       const contact = new V3(hub.x, gh, hub.z), pv = ptVel(contact);
       let Fn = this.k * c - this.cd * pv.dot(nrm);
       Fn = Math.max(0, Math.min(Fn, m * C.gravity * 2.2));                     // пружина не толкает сильнее ~2g на колесо
@@ -90,8 +91,8 @@ export class VehicleBody {
     }
     // корпус о грунт: отталкивание по нормали (стены — вбок)
     for (const [hx, hy, hz] of C.hull) {
-      const p = new V3(hx, hy, hz).applyQuaternion(q).add(this.pos), gh = g.groundY(p.x, p.z);
-      if (p.y < gh) { const nrm = W.normalAt(p.x, p.z), pen = gh - p.y, pv = ptVel(p), vn = pv.dot(nrm);
+      const p = new V3(hx, hy, hz).applyQuaternion(q).add(this.pos), gh = g.groundY(p.x, p.z, p.y + 0.3);
+      if (p.y < gh) { const nrm = GN(p.x, p.z, 1.1, p.y + 0.3), pen = gh - p.y, pv = ptVel(p), vn = pv.dot(nrm);
         addF(nrm.clone().multiplyScalar((vn < 0 ? -vn * m / 4 / dt * 0.35 : 0)), p); this.lift = Math.max(this.lift || 0, pen * 0.5); }
     }
     // интеграция
@@ -101,22 +102,22 @@ export class VehicleBody {
     this.w.copy(wl.applyQuaternion(q)).multiplyScalar(1 - (contacts ? 1.2 : 0.3) * dt);
     const np = this.pos.clone().addScaledVector(this.vel, dt);
     // препятствия: гейты зон, вода, камни, постройки
-    const blocked = W.blocked(np.x, np.z) || W.waterAt(np.x, np.z) > W.heightAt(np.x, np.z) + 0.9;
+    const blocked = W.blocked(np.x, np.z) || W.waterAt(np.x, np.z) > W.heightAt(np.x, np.z) + 0.9 || (W.W.no_drive || []).some(k => Math.hypot(np.x - k.x, np.z - k.z) < k.r && Math.hypot(this.pos.x - k.x, this.pos.z - k.z) >= Math.hypot(np.x - k.x, np.z - k.z));
     if (window.__vdbg) this.why = { blocked, solid: 0, col: 0 };
     if (blocked) { this.vel.x *= -0.2; this.vel.z *= -0.2; np.x = this.pos.x; np.z = this.pos.z; }
-    for (const s of g.player.solids || []) { if (s.r < (C.overRock ?? 1.0)) continue;   // мелкие камни переезжает
+    for (const s of g.player.nearSolids ? g.player.nearSolids(np.x, np.z) : g.player.solids || []) { if (s.r < (C.overRock ?? 1.0)) continue;   // мелкие камни переезжает
       const dx = np.x - s.x, dz = np.z - s.z, d = Math.hypot(dx, dz), r = s.r + 1.3;
       if (d < r && d > 1e-4) { if (this.why) this.why.solid = +(s.r).toFixed(2) + '@' + (s.x|0) + ',' + (s.z|0); np.x = s.x + dx / d * r; np.z = s.z + dz / d * r; const nx = dx / d, nz = dz / d, vn = this.vel.x * nx + this.vel.z * nz; if (vn < 0) { this.vel.x -= nx * vn * 1.2; this.vel.z -= nz * vn * 1.2; } } }
-    const qq = { x: np.x, z: np.z }; g.builder.collide?.(qq, 1.4); if (qq.x !== np.x || qq.z !== np.z) { if (this.why) this.why.col = 1; this.vel.x *= 0.3; this.vel.z *= 0.3; np.x = qq.x; np.z = qq.z; }
+    const qq = { x: np.x, z: np.z }; g.builder.collide?.(qq, 1.4); g.blockout?.col?.collide(qq, this.pos, this.pos.y - 0.3, 1.4, 2.2, 0.85); if (qq.x !== np.x || qq.z !== np.z) { if (this.why) this.why.col = 1; this.vel.x *= 0.3; this.vel.z *= 0.3; np.x = qq.x; np.z = qq.z; }
     const lim = W.half * 0.86; np.x = THREE.MathUtils.clamp(np.x, -lim, lim); np.z = THREE.MathUtils.clamp(np.z, -lim, lim);
     if (this.lift) { np.y += this.lift; this.lift = 0; }
     // тяжёлая: с кочки не выстреливает — ограничиваем вертикаль ОТНОСИТЕЛЬНО склона (подъём в гору не трогаем)
-    if (contacts) { const n0 = W.normalAt(this.pos.x, this.pos.z), vyG = -(n0.x * this.vel.x + n0.z * this.vel.z) / Math.max(0.3, n0.y), rel = this.vel.y - vyG, cap = C.hop ?? 1.6;
+    if (contacts) { const n0 = GN(this.pos.x, this.pos.z, 1.1, this.pos.y), vyG = -(n0.x * this.vel.x + n0.z * this.vel.z) / Math.max(0.3, n0.y), rel = this.vel.y - vyG, cap = C.hop ?? 1.6;
       if (rel > cap) this.vel.y -= (rel - cap) * Math.min(1, dt * 25); }
     this.pos.copy(np);
     const wlen = this.w.length(); if (wlen > 1e-6) { q.premultiply(new Q().setFromAxisAngle(this.w.clone().divideScalar(wlen), wlen * dt)); q.normalize(); }
     // страховка от провала под землю
-    const gc = g.groundY(this.pos.x, this.pos.z); if (this.pos.y < gc - 0.8) { this.pos.y = gc + 0.3; this.vel.y = Math.max(0, this.vel.y); }
+    const gc = g.groundY(this.pos.x, this.pos.z, this.pos.y + 0.5); if (this.pos.y < gc - 0.8) { this.pos.y = gc + 0.3; this.vel.y = Math.max(0, this.vel.y); }
   }
 
   apply() {

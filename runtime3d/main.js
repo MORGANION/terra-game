@@ -5,6 +5,7 @@ import { Models } from './models.js';
 import { Input, Player } from './player.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
+import { LightPool } from './lights.js';
 import { clone as skClone } from 'three/addons/utils/SkeletonUtils.js';
 
 const params = new URLSearchParams(location.search);
@@ -65,7 +66,7 @@ async function boot() {
   renderer.setPixelRatio(Math.min(devicePixelRatio, lowEnd ? 1 : 1.75));
   renderer.setSize(innerWidth, innerHeight);
   renderer.shadowMap.enabled = !lowEnd;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;   // PCFSoft в r186 удалён (молча = PCF), без варнинга
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -74,9 +75,12 @@ async function boot() {
   addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
 
   const scene = new THREE.Scene();
+  // Пул точечного света (см. lights.js) + отсечение дальних scatter-чанков туманом — для любой камеры (игра, превью, QA-облёт)
+  const lightPool = new LightPool(scene, lowEnd ? 3 : 6); let models = null;
+  scene.onBeforeRender = (r, sc, cam) => { lightPool.update(cam); models?.cull(cam, scene.fog); };
   const setLoad = (t, p) => { document.getElementById('loadtxt').textContent = t; document.getElementById('loadbar').style.width = p + '%'; };
   setLoad('Модели…', 10);
-  const models = new Models(new URL('models', location.href).pathname);
+  models = new Models(new URL('models', location.href).pathname);
   await models.load(man.models.map(m => m.id));
   if (man.props?.length && !params.has('procedural')) await models.loadGLB(man.props);
   models.recolorMap = Object.fromEntries(man.models.filter(m => m.recolor_map).map(m => [m.id, m.recolor_map]));
@@ -196,7 +200,7 @@ async function boot() {
     shadowFollow.copy(player.pos);
     world.sun.position.set(shadowFollow.x + 40, shadowFollow.y + 80, shadowFollow.z + 30);
     world.sun.target.position.copy(shadowFollow);
-    world.sky.position.copy(camera.position);
+    world.sky.position.copy(camera.position); world.updateTerrain(camera.position);
     if (ui.shakeAmt > 0) { camera.position.x += (Math.random() - 0.5) * ui.shakeAmt; camera.position.y += (Math.random() - 0.5) * ui.shakeAmt; ui.shakeAmt *= 0.9; if (ui.shakeAmt < 0.01) ui.shakeAmt = 0; }
     renderer.render(scene, camera);
     ui.update();

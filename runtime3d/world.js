@@ -1,6 +1,7 @@
 // Мир из данных: террейн (высоты + фичи), раскраска по стадии, вода, небо, туман, облака, дождь, ледяные стены, буря.
 import * as THREE from 'three';
 import { makeNoise } from './noise.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp01 = t => Math.max(0, Math.min(1, t));
@@ -35,6 +36,7 @@ export class World {
     y += (r * r - 0.5) * h.base_amp * h.ridge;
     y += n.fbm(x * h.detail_freq + 100, z * h.detail_freq + 100, 2) * h.detail_amp;
     for (const f of this.W.features) {
+      const B = f._hb ||= this.featBox(f, false); if (x < B[0] || x > B[1] || z < B[2] || z > B[3]) continue;   // вне зоны влияния — вклад точно 0
       if (f.type === 'basin') {
         const d = Math.hypot(x - f.x, z - f.z) / f.r;
         if (d < 1.3) y -= f.depth * smooth(clamp01(1 - d / 1.3)) * (1 + 0.15 * n.simplex(x * 0.05, z * 0.05));
@@ -59,6 +61,53 @@ export class World {
         const open = smooth(clamp01((0.36 - ad) / 0.1));
         const ring = smooth(clamp01((d - 0.85) / 0.1)) * smooth(clamp01((1.5 - d) / 0.2));
         y += Math.min(f.h, f.h * ring * (1 - open) * (0.9 + 0.1 * n.simplex(x * 0.15, z * 0.15)));
+      } else if (f.type === 'shield') {
+        // Щитовой вулкан: пологий конус (~27°, марсоход заезжает), радиальные борозды, кальдера с отвесными стенами
+        const dx = x - f.x, dz = z - f.z, dist = Math.hypot(dx, dz), d = dist / f.r;
+        if (d < 1.15) { const ang = Math.atan2(dz, dx);
+          let cone = f.h * (1 - d) + f.h * 0.06 * smooth(clamp01((1.15 - d) / 0.3)) - f.h * 0.06;
+          cone = Math.max(0, cone) * (1 + 0.03 * Math.sin(ang * 23 + n.simplex(x * 0.02, z * 0.02) * 3) * smooth(clamp01((0.95 - d) / 0.3)) * smooth(clamp01((d - 0.3) / 0.2)));
+          const foot = smooth(clamp01((1.15 - d) / 0.35));
+          y = y * (1 - 0.7 * smooth(clamp01((1 - d) / 0.4))) + cone * foot;
+          if (dist < f.cr * 1.25) y -= f.cd * smooth(clamp01((f.cr * 1.25 - dist) / (f.cr * 0.35)));
+        }
+      } else if (f.type === 'pit') {
+        // Провал лавовой трубки — круглая шахта
+        const d = Math.hypot(x - f.x, z - f.z) / f.r;
+        if (d < 1.2) y -= f.depth * smooth(clamp01((1.2 - d) / 0.35));
+      } else if (f.type === 'icecap') {
+        // Полярная шапка: плато со льдом, обрывы по краю, спиральные желоба-пандусы к центру
+        const dx = (x - f.x) / f.rx, dz = (z - f.z) / f.rz, d = Math.hypot(dx, dz) * (1 + 0.06 * n.simplex(x * 0.01, z * 0.01));
+        if (d < 1.1) { const ang = Math.atan2(dz, dx);
+          let cap = f.h * smooth(clamp01((1 - d) / 0.1)) + f.h * 0.35 * smooth(clamp01((0.75 - d) / 0.6));
+          // 3 широких пологих пандуса-желоба: от кромки (уровень земли) по спирали к центру — заезд на марсоходе
+          const sp = Math.abs(Math.sin((ang * 3 - d * 5.5) / 2));
+          const ramp = smooth(clamp01((0.42 - sp) / 0.2)) * smooth(clamp01((d - 0.1) / 0.2));
+          cap = lerp(cap, cap * smooth(clamp01((1.02 - d) / 1.0)) * 0.9, ramp);
+          y = y * (1 - smooth(clamp01((1 - d) / 0.2)) * 0.8) + Math.max(cap, -4);
+        }
+      } else if (f.type === 'dunes') {
+        // Море дюн: поперечные гряды с крутым подветренным склоном, амплитуда меняется барханами
+        const dx = (x - f.x) / f.rx, dz = (z - f.z) / f.rz, d = Math.hypot(dx, dz);
+        if (d < 1.1) { const m = smooth(clamp01((1.1 - d) / 0.3));
+          const wx = x + n.simplex(x * 0.006, z * 0.006) * 40, wz = z + n.simplex(x * 0.006 + 50, z * 0.006) * 40;
+          const u = (wx * 0.94 + wz * 0.34) / f.wl, t = u - Math.floor(u);
+          const prof = t < 0.76 ? smooth(t / 0.76) : smooth((1 - t) / 0.24);
+          const amp = f.a * (0.55 + 0.45 * (0.5 + 0.5 * n.simplex(x * 0.004, z * 0.004)));
+          y = y * (1 - 0.75 * m) + prof * amp * m;
+        }
+      } else if (f.type === 'geode') {
+        // Жеода: кольцо отвесных стен (выше 60 м), чаша внутри, разлом-вход
+        const dx = x - f.x, dz = z - f.z, d = Math.hypot(dx, dz) / f.r;
+        if (d < 1.7) { let ad = Math.abs(Math.atan2(Math.sin(Math.atan2(dz, dx) - f.gap), Math.cos(Math.atan2(dz, dx) - f.gap)));
+          const open = smooth(clamp01((0.34 - ad) / 0.1)) * smooth(clamp01((1.75 - d) / 0.1)) * smooth(clamp01((d - 0.55) / 0.2));
+          const ring = smooth(clamp01((d - 0.9) / 0.12)) * smooth(clamp01((1.6 - d) / 0.25));
+          y = y * smooth(clamp01((d - 0.85) / 0.4)) + f.h * ring * (1 - open) * (0.85 + 0.15 * n.simplex(x * 0.05, z * 0.05));
+          y -= f.depth * smooth(clamp01((1.0 - d) / 0.4)) * (1 - open * 0.5);
+          // дно: каменные уступы и бугры (не плоско), к центру — холм под Сердцем жеоды
+          const inner = smooth(clamp01((0.92 - d) / 0.2));
+          y += inner * (Math.max(0, n.simplex(x * 0.05, z * 0.05)) * 5 + smooth(clamp01((0.35 - d) / 0.35)) * 6);
+        }
       } else if (f.type === 'mesa') {
         // Столовая гора: отвесные стены, пешком не забраться
         const d = Math.hypot(x - f.x, z - f.z) / (f.r * (1 + 0.08 * n.simplex(x * 0.15, z * 0.15)));
@@ -68,143 +117,215 @@ export class World {
     // Террасы-плиты песчаника (стиль «каньон»): высоту ступенчато квантуем там, где рельеф уже крутой
     const T = this.W.terrace;
     if (T) {
-      const st = T.step, q = Math.floor(y / st), fr = y / st - q;
-      const ter = (q + smooth(clamp01((fr - (1 - T.sharp)) / T.sharp))) * st;
-      const k = clamp01(this.terraceMask(x, z)) * T.amount;
-      y = lerp(y, ter, k);
+      const mask = clamp01(this.terraceMask(x, z));
+      if (mask > 0) {
+        const st = T.step, q = Math.floor(y / st), fr = y / st - q;
+        const ter = (q + smooth(clamp01((fr - (1 - T.sharp)) / T.sharp))) * st;
+        const bw = this.biomeAt(x, z), nb = Math.max(bw[0], bw[2], bw[3]) * 0.85 + bw[1] * 0.4;
+        y = lerp(y, ter, mask * T.amount * (1 - nb));
+      }
     }
     // Края карты поднимаются — естественная стена
-    const edge = Math.max(Math.abs(x), Math.abs(z)) / this.half;
-    if (edge > 0.8) y += Math.pow((edge - 0.8) / 0.2, 2) * 18 * (0.7 + 0.3 * n.simplex(x * 0.02, z * 0.02));
+    // Края карты: сплошная гряда по скруглённому квадрату (p-норма — без изломов в углах); подъём плавный,
+    // высота гуляет низкочастотно, гребень — крупные холмы (без столбов-зубцов и щелей с небом)
+    const edge = this.edgeK(x, z), E0 = this.W.edge_from || 0.8;
+    if (edge > E0 - 0.04) { const t = clamp01((edge - E0 + 0.04) / (0.96 - E0 + 0.04)), H = this.W.edge_h || 18;   // к 0.96 — вершина, дальше плато до обреза карты (обрез не виден на фоне неба)
+      const v = 0.82 + 0.18 * n.simplex(x * 0.006 + 31, z * 0.006 - 17), bumps = 0.12 * n.simplex(x * 0.03, z * 0.03) * t;
+      y = lerp(y, Math.max(y, 0), smooth(t)) + H * v * (smooth(t) * 0.75 + t * t * 0.25 + bumps); }
     for (const fl of this.W.flatten || []) {
       const d = Math.hypot(x - fl.x, z - fl.z) / fl.r;
-      if (d < 1.4) y = lerp(fl.h, y, smooth(clamp01((d - 0.7) / 0.7)));
+      if (d < 1.4) { if (fl.h == null) { fl._noFlat = true; fl.h = this.rawHeightNoFlat(fl.x, fl.z); fl._noFlat = false; } y = lerp(fl.h, y, smooth(clamp01((d - 0.7) / 0.7))); }
     }
     return y;
   }
+  // AABB, вне которого фича не влияет на высоту (ter=false) или на маску террас (ter=true). Радиусы — с запасом над порогами формул.
+  featBox(f, ter) {
+    const K = ter ? { canyon: 2.7, mesa: 1.7, cavern: 2.2, ridge: 1.8, crater: 1.7, icecap: 1.1, geode: 1.8 }
+      : { basin: 1.4, crater: 1.5, ridge: 1.6, canyon: 1.5, cavern: 1.8, shield: 1.25, pit: 1.3, icecap: 1.25, dunes: 1.15, geode: 1.8, mesa: 1.45 };
+    const k = K[f.type]; if (k == null) return ter ? [1, -1, 1, -1] : [-1e9, 1e9, -1e9, 1e9];   // не влияет на маску / неизвестный тип — всегда считать
+    if (f.x1 != null) { const e = f.w * k; return [Math.min(f.x1, f.x2) - e, Math.max(f.x1, f.x2) + e, Math.min(f.z1, f.z2) - e, Math.max(f.z1, f.z2) + e]; }
+    const ex = (f.rx || f.r) * k, ez = (f.rz || f.r) * k; return [f.x - ex, f.x + ex, f.z - ez, f.z + ez];
+  }
+  rawHeightNoFlat(x, z) { const F = this.W.flatten; this.W.flatten = []; const y = this.rawHeight(x, z); this.W.flatten = F; return y; }
   // Где делать террасы: стены каньонов, меза, гряды, кромки кратеров, края карты (0..1)
   terraceMask(x, z) {
     let m = 0;
     for (const f of this.W.features) {
+      const B = f._tb ||= this.featBox(f, true); if (x < B[0] || x > B[1] || z < B[2] || z > B[3]) continue;
       if (f.type === 'canyon') { const d = segDist(x, z, f.x1, f.z1, f.x2, f.z2) / f.w; m = Math.max(m, smooth(clamp01((d - 0.55) / 0.4)) * smooth(clamp01((2.6 - d) / 0.8))); }
       else if (f.type === 'mesa') { const d = Math.hypot(x - f.x, z - f.z) / f.r; m = Math.max(m, smooth(clamp01((1.6 - d) / 0.4))); }
       else if (f.type === 'cavern') { const d = Math.hypot(x - f.x, z - f.z) / f.r; m = Math.max(m, smooth(clamp01((d - 0.7) / 0.1)) * smooth(clamp01((2.1 - d) / 0.3))); }
       else if (f.type === 'ridge') { const d = segDist(x, z, f.x1, f.z1, f.x2, f.z2) / f.w; m = Math.max(m, smooth(clamp01((1.7 - d) / 0.6))); }
       else if (f.type === 'crater') { const d = Math.hypot(x - f.x, z - f.z) / f.r; m = Math.max(m, smooth(clamp01((d - 0.7) / 0.15)) * smooth(clamp01((1.6 - d) / 0.2))); }
+      else if (f.type === 'icecap') { const d = Math.hypot((x - f.x) / f.rx, (z - f.z) / f.rz); m = Math.max(m, smooth(clamp01((1.05 - d) / 0.08)) * smooth(clamp01((d - 0.8) / 0.1))); }
+      else if (f.type === 'geode') { const d = Math.hypot(x - f.x, z - f.z) / f.r; m = Math.max(m, smooth(clamp01((d - 0.85) / 0.1)) * smooth(clamp01((1.7 - d) / 0.2))); }
     }
-    const edge = Math.max(Math.abs(x), Math.abs(z)) / this.half;
-    return Math.max(m, smooth(clamp01((edge - 0.8) / 0.08)));
+    return m;   // край карты — без террас (давали «зубцы» в шахматном порядке)
   }
+  edgeK(x, z) { const P = 8, ax = Math.abs(x) / this.half, az = Math.abs(z) / this.half; return Math.pow(Math.pow(ax, P) + Math.pow(az, P), 1 / P); }
+  // Высоты считаются лениво тайлами (TS сегментов): большой мир не тормозит старт. heightAt — билинейно по сетке step.
   buildHeightField() {
-    const n = this.W.segments + 1;
-    this.n = n;
-    this.hf = new Float32Array(n * n);
     this.step = this.size / this.W.segments;
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) this.hf[j * n + i] = this.rawHeight(-this.half + i * this.step, -this.half + j * this.step);
-    // Для раскраски: «влажность» = насколько точка ниже окрестности (лощины)
-    this.minH = Math.min(...this.hf); this.maxH = Math.max(...this.hf);
+    this.TS = 48; this.tiles = new Map();
+    this.nT = Math.ceil(this.W.segments / this.TS);
+  }
+  tile(ti, tj) {
+    const key = ti * 4096 + tj; let t = this.tiles.get(key); if (t) return t;
+    const N = this.TS + 1; t = new Float32Array(N * N);
+    const x0 = -this.half + ti * this.TS * this.step, z0 = -this.half + tj * this.TS * this.step;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) t[j * N + i] = this.rawHeight(x0 + i * this.step, z0 + j * this.step);
+    this.tiles.set(key, t); return t;
+  }
+  gridH(i, j) {   // высота в узле сетки (i, j)
+    const S = this.W.segments; i = Math.max(0, Math.min(S, i)); j = Math.max(0, Math.min(S, j));
+    const ti = Math.min(this.nT - 1, Math.floor(i / this.TS)), tj = Math.min(this.nT - 1, Math.floor(j / this.TS));
+    return this.tile(ti, tj)[(j - tj * this.TS) * (this.TS + 1) + (i - ti * this.TS)];
   }
   heightAt(x, z) {
-    const fx = (x + this.half) / this.step, fz = (z + this.half) / this.step;
-    const i = Math.max(0, Math.min(this.n - 2, Math.floor(fx))), j = Math.max(0, Math.min(this.n - 2, Math.floor(fz)));
-    const tx = clamp01(fx - i), tz = clamp01(fz - j), n = this.n, h = this.hf;
-    const a = h[j * n + i], b = h[j * n + i + 1], c = h[(j + 1) * n + i], d = h[(j + 1) * n + i + 1];
-    return lerp(lerp(a, b, tx), lerp(c, d, tx), tz);
+    const fx = (x + this.half) / this.step, fz = (z + this.half) / this.step, S = this.W.segments;
+    const i = Math.max(0, Math.min(S - 1, Math.floor(fx))), j = Math.max(0, Math.min(S - 1, Math.floor(fz)));
+    const tx = clamp01(fx - i), tz = clamp01(fz - j);
+    return lerp(lerp(this.gridH(i, j), this.gridH(i + 1, j), tx), lerp(this.gridH(i, j + 1), this.gridH(i + 1, j + 1), tx), tz);
   }
   normalAt(x, z) {
     const e = 0.6;
     return new THREE.Vector3(this.heightAt(x - e, z) - this.heightAt(x + e, z), 2 * e, this.heightAt(x, z - e) - this.heightAt(x, z + e)).normalize();
   }
   slopeAt(x, z) { return 1 - this.normalAt(x, z).y; }
+  // Биом точки: веса [базальт, лёд, тёмный песок, кристалл] — для раскраски
+  biomeAt(x, z) {
+    const w = [0, 0, 0, 0], idx = { basalt: 0, ice: 1, darksand: 2, crystal: 3 };
+    for (const f of this.W.features) { if (!f.biome) continue; let d;
+      if (f.rx) d = Math.hypot((x - f.x) / f.rx, (z - f.z) / f.rz); else d = Math.hypot(x - f.x, z - f.z) / (f.r * (f.biome_r || 1.15));
+      const k = smooth(clamp01((1 - d) / 0.18)); const i = idx[f.biome]; w[i] = Math.max(w[i], k); }
+    return w;
+  }
 
-  // ---------- Террейн ----------
+  // ---------- Террейн: чанки CH×CH сегментов, 3 уровня детализации, «юбка» по краю прячет щели между LOD ----------
   buildTerrain() {
-    const seg = this.W.segments;
-    const geo = new THREE.PlaneGeometry(this.size, this.size, seg, seg);
-    geo.rotateX(-Math.PI / 2);
-    const pos = geo.attributes.position;
-    for (let k = 0; k < pos.count; k++) pos.setY(k, this.heightAt(pos.getX(k), pos.getZ(k)));
-    geo.computeVertexNormals();
-    // Атрибуты для шейдера раскраски: влажность (насколько низко) и шум
-    const wet = new Float32Array(pos.count), nz = new Float32Array(pos.count);
-    for (let k = 0; k < pos.count; k++) {
-      const x = pos.getX(k), z = pos.getZ(k), y = pos.getY(k);
-      let w = 0;
-      for (const f of this.W.features) if (f.type === 'basin' || f.type === 'crater' || f.type === 'canyon') {
-        const d = f.type === 'canyon' ? segDist(x, z, f.x1, f.z1, f.x2, f.z2) / (f.w * 2.2) : Math.hypot(x - f.x, z - f.z) / (f.r * 2.2);
-        w = Math.max(w, clamp01(1 - d));
-      }
-      wet[k] = clamp01(w * 1.1 + clamp01((2 - y) / 12) * 0.35);
-      nz[k] = this.noise.simplex(x * 0.08, z * 0.08) * 0.5 + 0.5;
-    }
-    geo.setAttribute('aWet', new THREE.BufferAttribute(wet, 1));
-    geo.setAttribute('aNoise', new THREE.BufferAttribute(nz, 1));
     this.groundUniforms = {
       uDry: { value: new THREE.Color() }, uDry2: { value: new THREE.Color() }, uLush: { value: new THREE.Color() },
-      uFlora: { value: 0 }, uWaterLevel: { value: -100 }, uPools: { value: [new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100)] }, uFrost: { value: new THREE.Vector4(0, 0, 0, 0) }, uFrostAmt: { value: 0 }, uScorch: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
+      uFlora: { value: 0 }, uWaterLevel: { value: -100 }, uPools: { value: [new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100), new THREE.Vector4(0,0,0,-100)] }, uFrost: { value: new THREE.Vector4(0, 0, 0, 0) }, uFrostAmt: { value: 0 }, uScorch: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) }, uTime: { value: 0 }, uVolc: { value: new THREE.Vector3(0, 0, 1) },
     };
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0, flatShading: !!this.W.faceted, vertexColors: false });
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, this.groundUniforms);
       sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nattribute float aWet; attribute float aNoise; varying float vWet; varying float vNoise; varying vec3 vWPos; varying float vUp;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWet = aWet; vNoise = aNoise; vWPos = (modelMatrix * vec4(position,1.0)).xyz; vUp = normal.y;');
+        .replace('#include <common>', '#include <common>\nattribute float aWet; attribute float aNoise; attribute vec4 aBiome; varying float vWet; varying float vNoise; varying vec3 vWPos; varying float vUp; varying vec4 vBiome;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWet = aWet; vNoise = aNoise; vBiome = aBiome; vWPos = (modelMatrix * vec4(position,1.0)).xyz; vUp = normal.y;');
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform vec3 uDry; uniform vec3 uDry2; uniform vec3 uLush; uniform float uFlora; uniform float uWaterLevel; uniform vec4 uFrost; uniform float uFrostAmt; uniform vec4 uPools[6]; uniform vec4 uScorch[4]; varying float vWet; varying float vNoise; varying vec3 vWPos; varying float vUp;')
+        .replace('#include <common>', '#include <common>\nuniform vec3 uDry; uniform vec3 uDry2; uniform vec3 uLush; uniform float uFlora; uniform float uWaterLevel; uniform vec4 uFrost; uniform float uFrostAmt; uniform vec4 uPools[6]; uniform vec4 uScorch[4]; uniform float uTime; uniform vec3 uVolc; varying float vWet; varying float vNoise; varying vec3 vWPos; varying float vUp; varying vec4 vBiome;')
+        // Высотный туман: вершины гор видны издалека (воздух выше — прозрачнее)
+        .replace('#include <fog_fragment>', `#ifdef USE_FOG
+          float fd2 = vFogDepth * mix(1.0, 0.32, smoothstep(12.0, 140.0, vWPos.y));
+          float fogF = 1.0 - exp( - fogDensity * fogDensity * fd2 * fd2 );
+          gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogF );
+        #endif`)
         .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
           vec3 base = mix(uDry, mix(uDry, uDry2, 0.45), smoothstep(0.3, 0.8, vNoise));
           float cliff = smoothstep(0.88, 0.7, vUp);
-          // Скалы: слоистый песчаник — полосы по высоте, тёмные щели между плитами, светлые полки сверху
           float band = fract(vWPos.y / 2.6 + vNoise * 0.08);
-          // Скалы — всегда марсианский красный песчаник, на любой стадии
           vec3 mR1 = vec3(0.66, 0.28, 0.17), mR2 = vec3(0.85, 0.52, 0.33);
-          vec3 rock = mix(mR1 * 0.62, mR1 * 0.95, smoothstep(0.05, 0.9, band));
+          // Скалы биомов: базальт (тёмно-серый), лёд (голубые слои), тёмный песчаник, аметистовая порода
+          float bB = vBiome.x, bI = vBiome.y, bD = vBiome.z, bC = vBiome.w;
+          mR1 = mix(mR1, vec3(0.035, 0.03, 0.032), bB); mR2 = mix(mR2, vec3(0.09, 0.075, 0.075), bB);
+          mR1 = mix(mR1, vec3(0.38, 0.6, 0.82), bI); mR2 = mix(mR2, vec3(0.9, 0.96, 1.0), bI);
+          mR1 = mix(mR1, vec3(0.05, 0.035, 0.05), bD); mR2 = mix(mR2, vec3(0.14, 0.09, 0.11), bD);
+          mR1 = mix(mR1, vec3(0.10, 0.04, 0.16), bC); mR2 = mix(mR2, vec3(0.30, 0.14, 0.42), bC);
+          vec3 rock = mix(mR1 * mix(0.62, 0.85, bC), mR1 * 0.95, smoothstep(0.05, 0.9, band));
           rock = mix(rock, mR2 * 1.05, smoothstep(0.9, 0.98, band));
           rock = mix(rock, mR1 * 0.4, smoothstep(0.98, 1.0, band) + (1.0 - smoothstep(0.0, 0.04, band)));
+          // Грунт биомов
+          base = mix(base, mix(vec3(0.04, 0.035, 0.035), vec3(0.08, 0.065, 0.06), vNoise), bB);
+          base = mix(base, mix(vec3(0.86, 0.92, 0.97), vec3(0.97, 0.99, 1.0), vNoise) * (0.94 + 0.06 * step(0.5, fract(vWPos.y * 0.7))), bI);
+          float crest = smoothstep(0.75, 0.98, vUp);
+          base = mix(base, mix(vec3(0.045, 0.035, 0.06), vec3(0.085, 0.065, 0.09), vNoise) * mix(0.8, 1.25, crest) + vec3(0.3, 0.09, 0.02) * smoothstep(0.985, 1.0, vUp) * 0.5, bD);
+          base = mix(base, mix(vec3(0.16, 0.06, 0.26), vec3(0.32, 0.12, 0.48), vNoise), bC);
           base = mix(base, rock, cliff);
           base *= mix(1.0, 1.12, smoothstep(0.93, 1.0, vUp) * (1.0 - cliff) * 0.6);
-          // Зелень: ниже и ближе к воде — раньше; растёт с uFlora
-          // Зелень ложится сплошным ковром (влажность влияет слабо — без песчаных «троп» по гребням); рябь даёт пятнистый край, а не ленты
           float ripple = fract(sin(dot(floor(vWPos.xz * 0.45), vec2(12.9898, 78.233))) * 43758.5453);
           float green = clamp(uFlora * 2.2 - (1.0 - vWet) * 0.35 + (vNoise - 0.5) * 0.35 + (ripple - 0.5) * 0.25, 0.0, 1.0) * (1.0 - cliff);
-          // Навсегда безжизненное: горы выше 7 м и крупные округлые сухие пятна (не ленты)
           float barren = max(smoothstep(6.0, 10.0, vWPos.y), smoothstep(0.82, 0.9, vNoise) * (1.0 - vWet * 0.6));
           green *= 1.0 - barren;
-          // Голые высоты и сухие пятна — красный реголит даже на живой планете
-          base = mix(base, mix(mR2, mR1, smoothstep(0.3, 0.8, vNoise)) * (1.0 - cliff) + rock * cliff, barren * smoothstep(0.25, 0.6, uFlora));
+          green *= 1.0 - clamp(bB + bI + bD + bC, 0.0, 1.0);   // в биомах зелени не будет никогда
+          base = mix(base, mix(mR2, mR1, smoothstep(0.3, 0.8, vNoise)) * (1.0 - cliff) + rock * cliff, barren * smoothstep(0.25, 0.6, uFlora) * (1.0 - clamp(bB + bI + bD + bC, 0.0, 1.0)));
           vec3 lush = mix(uLush * 0.72, uLush * vec3(1.18, 1.12, 0.78), smoothstep(0.2, 0.9, vNoise));
           lush = mix(lush, vec3(0.62, 0.66, 0.32), smoothstep(4.0, 12.0, vWPos.y) * 0.6);
           float patchy = smoothstep(0.15, 0.55, fract(vNoise * 3.7 + vWet));
           base = mix(base, lush, green * mix(0.75, 1.0, patchy));
-          // Мокрый берег
           float shore = 0.0;
           for (int i = 0; i < 6; i++) { vec4 P = uPools[i]; if (P.w < -50.0) continue;
             float inR = step(length(vWPos.xz - P.xy), P.z);
             shore = max(shore, inR * smoothstep(1.3, 0.0, vWPos.y - P.w) * step(P.w - 3.0, vWPos.y)); }
           base = mix(base, mix(base * 0.55, vec3(0.8, 0.72, 0.52), 0.3), shore);
-          // Иней в замороженных зонах
           float fd = length(vWPos.xz - uFrost.xy) / max(uFrost.z, 1.0);
           float inZone = smoothstep(1.05, 0.75, fd);
-          // После таяния стены зона остаётся узнаваемой: снежные шапки на буграх и уступах + пятна наста по шуму — навсегда
           float caps = inZone * max(step(0.56, vNoise + 0.04 * sin(vWPos.x * 1.7) * cos(vWPos.z * 1.3)), step(0.9, vUp) * step(0.5, vWPos.y + vNoise * 3.0) * step(0.42, vNoise));
           float frost = max(inZone * uFrostAmt, caps);
           base = mix(base, vec3(0.93, 0.97, 1.0) * (0.92 + 0.08 * vNoise), frost);
-          // Выжженная земля вокруг метеоритов: чёрный центр, тлеющая кайма
           for (int i = 0; i < 4; i++) { vec4 S = uScorch[i]; if (S.w <= 0.0) continue;
             vec2 q = vWPos.xz - S.xy; float ang = atan(q.y, q.x);
             float sd = length(q) / S.z * (1.0 + 0.16 * sin(ang * 7.0) + 0.09 * sin(ang * 13.0 + 1.7)) + (vNoise - 0.5) * 0.12;
             float burn = (1.0 - smoothstep(0.45, 1.0, sd)) * S.w;
             base = mix(base, vec3(0.04, 0.03, 0.028), burn);
-            // тлеющие угли: редкие светящиеся ячейки в центре гари
             vec2 cell = floor(vWPos.xz * 1.6); float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
             float ember = step(0.88, h) * (1.0 - smoothstep(0.1, 0.65, sd)) * S.w;
             base = mix(base, vec3(1.0, 0.38, 0.06), ember * 0.85); }
-          vec4 diffuseColor = vec4( base, opacity );`);
+          vec4 diffuseColor = vec4( base, opacity );`)
+        // Раскалённые трещины базальта светятся (emissive), пульсируют
+        .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+          { vec2 vq = vWPos.xz - uVolc.xy; float vr = length(vq) / uVolc.z, va = atan(vq.y, vq.x);
+            float lane = abs(fract(va * 3.0 + vNoise * 0.35 + sin(vr * 9.0) * 0.08) - 0.5);
+            float wdt = mix(0.018, 0.06, smoothstep(0.25, 0.9, vr)) * (0.7 + 0.6 * vNoise); float crack = vBiome.x * smoothstep(wdt, wdt * 0.45, lane) * smoothstep(0.2, 0.3, vr) * smoothstep(1.02, 0.8, vr) * (1.0 - cliff * 0.7);
+            float crust = vBiome.x * smoothstep(wdt * 2.2, wdt, lane) * (1.0 - crack) * smoothstep(0.2, 0.3, vr); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.22, 0.05, 0.02), crust * 0.8);
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.3, 0.02), crack); totalEmissiveRadiance += mix(vec3(1.0, 0.18, 0.02), vec3(1.0, 0.75, 0.2), smoothstep(0.4, 0.95, 1.0 - lane / max(wdt, 1e-3))) * crack * (1.6 + 0.5 * sin(uTime * 2.0 - vr * 30.0));
+            float gl = vBiome.w * step(0.9, fract(vNoise * 13.0 + vWPos.z * 0.021)); totalEmissiveRadiance += vec3(0.55, 0.25, 1.0) * gl * 0.6; }`);
     };
-    this.terrain = new THREE.Mesh(geo, mat);
-    this.terrain.receiveShadow = true;
-    this.terrain.name = 'terrain';
-    this.scene.add(this.terrain);
+    this.terrainMat = mat; { const V = this.W.features.find(f => f.type === 'shield'); if (V) this.groundUniforms.uVolc.value.set(V.x, V.z, V.r); }
+    this.terrain = new THREE.Group(); this.terrain.name = 'terrain'; this.scene.add(this.terrain);
+    this.CH = 80; const nC = Math.ceil(this.W.segments / this.CH);
+    this.chunks = [];
+    for (let cj = 0; cj < nC; cj++) for (let ci = 0; ci < nC; ci++) {
+      const c = { ci, cj, lod: -1, meshes: [], cx: -this.half + (ci + 0.5) * this.CH * this.step, cz: -this.half + (cj + 0.5) * this.CH * this.step };
+      this.chunks.push(c);
+    }
+    this.lodDist = this.W.lod_dist || [130, 300];
+    this.updateTerrain(new THREE.Vector3(0, 0, 0), true);
+  }
+  // Сетка чанка с шагом stride; skirt — опускание краёв на 4 м
+  chunkGeo(c, stride) {
+    const CH = this.CH, S = this.W.segments, i0 = c.ci * CH, j0 = c.cj * CH;
+    // размеры по осям раздельно: у крайних чанков ширина и глубина разные (раньше брался общий min → дыры-«зубцы» по краю карты)
+    const nx = Math.ceil(Math.min(CH, S - i0) / stride), nz2 = Math.ceil(Math.min(CH, S - j0) / stride), NX = nx + 1, NZ = nz2 + 1, N = NX;
+    const cnt = NX * NZ + 2 * NX + 2 * NZ, pos = new Float32Array(cnt * 3), wet = new Float32Array(cnt), nz = new Float32Array(cnt), bio = new Float32Array(cnt * 4);
+    const idx = []; let k = 0;
+    const put = (i, j, drop) => { const x = -this.half + i * this.step, z = -this.half + j * this.step, y = this.gridH(i, j) - drop;
+      pos.set([x, y, z], k * 3);
+      let w = 0; for (const f of this.W.features) if (f.type === 'basin' || f.type === 'crater' || f.type === 'canyon') { const d = f.type === 'canyon' ? segDist(x, z, f.x1, f.z1, f.x2, f.z2) / (f.w * 2.2) : Math.hypot(x - f.x, z - f.z) / (f.r * 2.2); if (d < 1) w = Math.max(w, 1 - d); }
+      wet[k] = clamp01(w * 1.1 + clamp01((2 - y) / 12) * 0.35); nz[k] = this.noise.simplex(x * 0.08, z * 0.08) * 0.5 + 0.5; bio.set(this.biomeAt(x, z), k * 4); return k++; };
+    const gi = i => Math.min(i0 + i * stride, S), gj = j => Math.min(j0 + j * stride, S);
+    for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) put(gi(i), gj(j), 0);
+    for (let j = 0; j < nz2; j++) for (let i = 0; i < nx; i++) { const a = j * N + i, b = a + 1, c2 = a + N, d = c2 + 1; idx.push(a, c2, b, b, c2, d); }
+    // юбка: 4 края
+    const edge = (list) => { const base = k; for (const [i, j] of list) put(gi(i), gj(j), 4); for (let t = 0; t < list.length - 1; t++) { const a = list[t][1] * N + list[t][0], b = list[t + 1][1] * N + list[t + 1][0]; idx.push(a, b, base + t, b, base + t + 1, base + t); idx.push(a, base + t, b, b, base + t, base + t + 1); } };
+    const LX = [...Array(NX).keys()], LZ = [...Array(NZ).keys()];
+    edge(LX.map(i => [i, 0])); edge(LX.map(i => [i, nz2])); edge(LZ.map(j => [0, j])); edge(LZ.map(j => [nx, j]));
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos.subarray(0, k * 3), 3)); g.setAttribute('aWet', new THREE.BufferAttribute(wet.subarray(0, k), 1));
+    g.setAttribute('aNoise', new THREE.BufferAttribute(nz.subarray(0, k), 1)); g.setAttribute('aBiome', new THREE.BufferAttribute(bio.subarray(0, k * 4), 4));
+    g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere(); return g;
+  }
+  // Каждый кадр: нужный LOD чанкам рядом с камерой; перестройка — не больше budget чанков за кадр
+  updateTerrain(cam, all = false) {
+    const [d0, d1] = this.lodDist; let budget = all ? 1e9 : 2;
+    const dy = Math.max(0, cam.y - 60);   // высоко над картой (джетпак, облёт) — дистанция с учётом высоты: мельче LOD
+    const want = c => { const d = Math.hypot(cam.x - c.cx, cam.z - c.cz, dy) - this.CH * this.step * 0.7; return d < d0 ? 0 : d < d1 ? 1 : 2; };
+    const order = this.chunks.map(c => [c, want(c)]).filter(([c, w]) => c.lod !== w).sort((a, b) => a[1] - b[1] || Math.hypot(cam.x - a[0].cx, cam.z - a[0].cz) - Math.hypot(cam.x - b[0].cx, cam.z - b[0].cz));
+    for (const [c, w] of order) { if (budget-- <= 0) break;
+      c.geos ||= []; if (!c.geos[w]) c.geos[w] = this.chunkGeo(c, [1, 2, 4][w]);
+      if (!c.mesh) { c.mesh = new THREE.Mesh(c.geos[w], this.terrainMat); c.mesh.receiveShadow = true; c.mesh.name = 'terrain'; this.terrain.add(c.mesh); }
+      else c.mesh.geometry = c.geos[w];
+      c.lod = w; if (w === 2) { c.geos[0] = null; } }
   }
 
   // ---------- Вода: своя гладь в каждой лощине/кратере, уровень = дно + заполнение × глубина ----------
@@ -333,16 +454,15 @@ export class World {
     this.clouds = new THREE.Group();
     const cm = new THREE.MeshStandardMaterial({ color: '#ffffff', flatShading: true, transparent: true, opacity: 0.85, roughness: 1, fog: false });
     const r = this.noise.rnd;
-    for (let i = 0; i < 26; i++) {
-      const c = new THREE.Group();
-      const n = 5 + Math.floor(r() * 5);
+    for (let i = 0; i < Math.round(26 * Math.pow(this.size / 400, 1.4)); i++) {
+      // Облако = один меш (шары слиты в одну геометрию): 1 draw call вместо 5–9
+      const n = 5 + Math.floor(r() * 5), parts = [];
       for (let k = 0; k < n; k++) {
-        const m = new THREE.Mesh(new THREE.IcosahedronGeometry(9 + r() * 8, 1), cm);
-        m.position.set(k * 9 - n * 4.5 + r() * 5, r() * 5, r() * 14 - 7);
-        m.scale.y = 0.6;
-        c.add(m);
+        const g = new THREE.IcosahedronGeometry(9 + r() * 8, 1);
+        g.scale(1, 0.6, 1); g.translate(k * 9 - n * 4.5 + r() * 5, r() * 5, r() * 14 - 7); parts.push(g);
       }
-      c.position.set((r() - 0.5) * 800, 70 + r() * 40, (r() - 0.5) * 800);
+      const c = new THREE.Mesh(mergeGeometries(parts, false), cm);
+      c.position.set((r() - 0.5) * (this.size + 400), 90 + r() * 60, (r() - 0.5) * (this.size + 400));
       this.clouds.add(c);
     }
     this.clouds.name = 'clouds';
@@ -392,16 +512,14 @@ export class World {
       const g = { zone: z, open: false, objects: [] };
       if (z.ice_ring) {
         // Сплошное ледяное кольцо по границе зоны: торосы внахлёст в два ряда, обойти нельзя
-        const R = z.r, n = Math.ceil(2 * Math.PI * R / 2.6);
+        // Один InstancedMesh-набор на кольцо (было ~220 отдельных групп ≈ 580 draw call)
+        const R = z.r, n = Math.ceil(2 * Math.PI * R / 2.6), list = [];
         for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) {
           const a = (i + row * 0.5) / n * Math.PI * 2, rr = R + (row ? 1.6 : -0.4) + Math.sin(i * 1.7) * 0.5, x = z.x + Math.cos(a) * rr, zz = z.z + Math.sin(a) * rr;
-          const o = models.instance('ice_wall');
-          o.position.set(x, this.heightAt(x, zz) - 0.5, zz);
-          o.rotation.y = -a + Math.PI / 2 + Math.sin(i * 3.1) * 0.25;
-          o.scale.set(1.5 + (i * 7 % 5) * 0.12, 1.7 + (i * 3 % 4) * 0.25 + (row ? 0.5 : 0), 1.4); o.rotation.z = Math.sin(i * 2.3) * 0.18; o.rotation.x = Math.cos(i * 1.9) * 0.15;
-          o.userData.sy = o.scale.y;
-          this.scene.add(o); g.objects.push(o);
+          const sx = 1.5 + (i * 7 % 5) * 0.12, SY = 1.7 + (i * 3 % 4) * 0.25 + (row ? 0.5 : 0);
+          list.push({ x, y: this.heightAt(x, zz) - 0.5, z: zz, rot: -a + Math.PI / 2 + Math.sin(i * 3.1) * 0.25, tilt: { x: Math.cos(i * 1.9) * 0.15, z: Math.sin(i * 2.3) * 0.18 }, scale: sx, sy: SY / sx, sz: 1.4 / sx, SY, sx });
         }
+        g.ice = { ctl: models.scatter(this.scene, 'ice_wall', list, { shadows: true }), list, k: 1, melt: -1 };
         g.ring = { x: z.x, z: z.z, r: R + 0.6 };
       }
       if (z.storm) {
@@ -475,12 +593,12 @@ export class World {
     this.waterLevel = shoreLevel; // для совместимости (HUD/снимок)
     this.groundUniforms.uWaterLevel.value = -100;
     this.pools.slice(0, 6).forEach((p, i) => this.groundUniforms.uPools.value[i].set(p.f.x, p.f.z, p.f.r * 1.5, p.mesh.visible ? p.level : -100));
-    this.waterUniforms.uTime.value += dt;
+    this.waterUniforms.uTime.value += dt; this.groundUniforms.uTime.value += dt;
     // Облака и дождь
     const cl = num('clouds');
     this.clouds.visible = cl > 0.02;
     this.cloudMat.opacity = 0.9 * cl;
-    this.clouds.children.forEach((c, i) => { c.visible = i / this.clouds.children.length < cl * 1.3; c.position.x += dt * 2.5; if (c.position.x > 400) c.position.x = -400; });
+    this.clouds.children.forEach((c, i) => { c.visible = i / this.clouds.children.length < cl * 1.3; c.position.x += dt * 2.5; if (c.position.x > this.half + 200) c.position.x = -this.half - 200; });
     const rainChance = num('rain');
     this.rainClock -= dt;
     if (this.rainClock <= 0) { this.raining = Math.random() < rainChance ? 1 : 0; this.rainClock = 25 + Math.random() * 30; }
@@ -509,11 +627,12 @@ export class World {
         g.open = true; events.push({ type: 'gate_open', zone: g.zone });
       }
       if (g.open) {
-        for (const o of g.objects) { o.scale.multiplyScalar(1 - Math.min(0.9, dt * 0.6)); if (o.scale.x < 0.05) o.visible = false; }
+        if (g.ice && g.ice.k > 0) { const I = g.ice; I.k *= 1 - Math.min(0.9, dt * 0.6); const kk = I.k * 1.5 < 0.05 ? 0 : I.k;   // 1.5 — мин. исходный масштаб
+          I.list.forEach((t, i) => I.ctl.set(i, kk ? { scale: t.sx * kk, visible: true } : { visible: false })); I.ctl.flush(); I.k = kk; }
         if (g.storm) { const u = g.storm.material.uniforms.opacity; u.value *= 1 - Math.min(0.9, dt * 0.8); if (u.value < 0.02) g.storm.visible = false; }
       } else {
         // Ледяные стены подтаивают по мере прогресса
-        for (const o of g.objects) o.scale.y = Math.max(0.5, (o.userData.sy || 1.25) * (1 - prog * 0.35));
+        if (g.ice && Math.abs(prog - g.ice.melt) > 0.002) { const I = g.ice; I.melt = prog; I.list.forEach((t, i) => I.ctl.set(i, { sy: Math.max(0.5, t.SY * (1 - prog * 0.35)) / t.sx })); I.ctl.flush(); }
         if (g.storm) { g.storm.rotation.y += dt * 0.3; g.storm.material.uniforms.uTime.value += dt; }
       }
     }

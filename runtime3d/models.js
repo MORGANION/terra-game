@@ -7,8 +7,40 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function retry(fn, tries = 5) { let e; for (let i = 0; i < tries; i++) { try { return await fn(i); } catch (x) { e = x; await sleep(400 * (i + 1) + Math.random() * 300); } } throw e; }
 async function pool(items, n, fn) { const q = [...items]; await Promise.all(Array.from({ length: Math.min(n, q.length) }, async () => { while (q.length) await fn(q.shift()); })); }
 
+// Статичные меши-дети группы с общим непрозрачным материалом → один меш на материал (позиция+нормаль+uv).
+// Меши с уникальным материалом и skip-набор не трогаем (на них могут ссылаться анимации/логика).
+export function mergeStatic(grp, skip = null) {
+  const by = new Map();
+  for (const m of grp.children) if (m.isMesh && !m.isInstancedMesh && !m.isSkinnedMesh && !m.children.length && !Array.isArray(m.material) && !m.material.transparent && !skip?.has(m)) { if (!by.has(m.material)) by.set(m.material, []); by.get(m.material).push(m); }
+  let saved = 0;
+  for (const [mat, list] of by) {
+    if (list.length < 2) continue;
+    const geos = list.map(m => { m.updateMatrix(); let g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); g.applyMatrix4(m.matrix);
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+      if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2)); return g; });
+    const g = mergeGeometries(geos, false); if (!g) continue;
+    const m = new THREE.Mesh(g, mat); m.castShadow = list[0].castShadow; m.receiveShadow = list[0].receiveShadow; m.name = list[0].name;
+    for (const o of list) { grp.remove(o); o.geometry.dispose(); }
+    grp.add(m); saved += list.length - 1;
+  }
+  return saved;
+}
+
 export class Models {
-  constructor(base) { this.base = base; this.protos = {}; this.baked = {}; }
+  constructor(base) { this.base = base; this.protos = {}; this.baked = {}; this.chunks = []; this._cp = new THREE.Vector3(); }
+
+  // Отсечение scatter-чанков по дальности (раз за render, из scene.onBeforeRender): дальше, чем туман полностью
+  // закрывает объект (FogExp2: 1-exp(-(d·ρ)²) > 0.995 ⇒ d > 2.3/ρ), или дальше radius·sizeK (мельче ~2 px) — не рисуем.
+  // Туман Three.js считается по глубине вдоль взгляда (vFogDepth), поэтому для тумана — глубина центра чанка, для размера — расстояние.
+  cull(cam, fog) {
+    const fogD = fog?.density > 0 ? 2.3 / fog.density : 1e9, cp = this._cp.setFromMatrixPosition(cam.matrixWorld), e = cam.matrixWorld.elements;
+    const fx = -e[8], fy = -e[9], fz = -e[10];
+    for (const ch of this.chunks) {
+      const dx = ch.c.x - cp.x, dy = ch.c.y - cp.y, dz = ch.c.z - cp.z, lim = ch.sizeD + ch.r;
+      const on = ch.n > 0 && dx * fx + dy * fy + dz * fz - ch.r < fogD && dx * dx + dy * dy + dz * dz < lim * lim;
+      if (on !== ch.on) { ch.on = on; for (const im of ch.meshes) im.visible = on; }
+    }
+  }
 
   async load(ids) {
     const v = Date.now();
@@ -142,13 +174,14 @@ export class Models {
 
   // Много копий одной модели: карта режется на чанки (frustum culling работает), в каждом чанке
   // InstancedMesh на каждую часть модели, в буфер пишутся ТОЛЬКО видимые экземпляры (скрытые не стоят GPU).
-  scatter(scene, id, transforms, { shadows = true, cell = 64 } = {}) {
+  // cell 96: крупнее чанк — меньше draw call; frustum culling по чанку остаётся (см. cull).
+  scatter(scene, id, transforms, { shadows = true, cell = 96, sizeK = 600 } = {}) {
     const b = this.bake(id);
     const items = transforms.map((t, i) => ({ ...t, index: i, visible: t.visible !== false }));
     const chunks = new Map();
     for (const it of items) {
       const key = Math.floor(it.x / cell) + ',' + Math.floor(it.z / cell);
-      if (!chunks.has(key)) chunks.set(key, { items: [], meshes: [], dirty: true });
+      if (!chunks.has(key)) chunks.set(key, { items: [], meshes: [], dirty: true, n: 0, on: true, c: new THREE.Vector3(), r: 0, sizeD: Math.max(60, b.radius * sizeK) });
       const ch = chunks.get(key); it.chunk = ch; ch.items.push(it);
     }
     for (const ch of chunks.values()) {
@@ -157,6 +190,11 @@ export class Models {
         im.castShadow = shadows; im.receiveShadow = true; im.name = 'inst_' + id;
         scene.add(im); return im;
       });
+      // центр/радиус чанка по всем экземплярам (для отсечения по дальности)
+      let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
+      for (const it of ch.items) { x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); y0 = Math.min(y0, it.y); y1 = Math.max(y1, it.y); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z); }
+      ch.c.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2); ch.r = Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2 + b.radius * 3;
+      this.chunks.push(ch);
     }
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), pos = new THREE.Vector3(), e = new THREE.Euler();
     const flush = ch => {
@@ -165,16 +203,16 @@ export class Models {
         if (!it.visible) continue;
         const sc = it.scale ?? 1;
         e.set(it.tilt?.x || 0, it.rot || 0, it.tilt?.z || 0); q.setFromEuler(e);
-        s.set(sc, sc * (it.sy ?? 1), sc); pos.set(it.x, it.y, it.z);
+        s.set(sc, sc * (it.sy ?? 1), sc * (it.sz ?? 1)); pos.set(it.x, it.y, it.z);
         m4.compose(pos, q, s);
         for (const im of ch.meshes) im.setMatrixAt(n, m4);
         n++;
       }
       for (const im of ch.meshes) {
-        im.count = n; im.visible = n > 0; im.instanceMatrix.needsUpdate = true;
+        im.count = n; im.visible = n > 0 && ch.on; im.instanceMatrix.needsUpdate = true;
         if (n) { im.computeBoundingSphere(); im.boundingSphere.radius += b.radius; }
       }
-      ch.dirty = false;
+      ch.n = n; ch.dirty = false;
     };
     const ctl = {
       id, items, radius: b.radius, count: items.length,

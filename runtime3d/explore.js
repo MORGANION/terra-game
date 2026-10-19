@@ -1,10 +1,12 @@
 // Исследование: снаряжение и чертежи, метеориты v2, сутки и бури, точки интереса (обломки, тела, пещера), фонари.
 import * as THREE from 'three';
+import { mergeStatic } from './models.js';
 import { Loot } from './loot.js';
 import { rng } from './noise.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const LAMP_LIGHTS = 6;
+const FX_RED = new THREE.Color('#ff3020');   // без аллокаций в кадре
 
 export class Explore {
   constructor(g) {
@@ -101,6 +103,25 @@ export class Explore {
         this.darkZones.push({ x: bx, z: bz, r: 10, name: p.name });
       }
     }
+    // Ориентиры регионов (Tripo-модели): огромный объект + тайник у подножия; метка на компасе
+    this.landmarks = [];
+    for (const L of W.landmarks || []) {
+      let o; try { o = M.instance(L.model); } catch { continue; }
+      o.scale.multiplyScalar((L.size || 10) / 10 * (L.tall ? 1 : 1)); if (L.tall) o.scale.y *= L.tall;
+      o.position.set(L.x, w.heightAt(L.x, L.z) - (L.sink ?? 0.4), L.z); o.rotation.y = L.rot || 0; g.scene.add(o);
+      if (!L.interior) g.player.addSolid(L.x, L.z, L.r * 0.55);
+      const a = (L.rot || 0) + Math.PI / 2, cx = L.x + Math.cos(a) * L.r * 0.8, cz = L.z - Math.sin(a) * L.r * 0.8;
+      if (!L.interior) box(`lm:${L.id}`, cx, cz, L.table, `${L.name}: тайник`, 'chest', L.rot || 0);
+      // Эффекты ориентира: мигающие огни, свечение (точечный свет), пар — точки в системе модели
+      const fx = { lights: [], steam: [], glows: [] }, F = L.fx || {};
+      for (const [x, y, z, c] of F.lights || []) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshBasicMaterial({ color: c, toneMapped: false })); m.position.set(x, y, z); o.add(m); const pl = new THREE.PointLight(c, 0, 30, 1.5); pl.position.copy(m.position); o.add(pl); fx.lights.push({ m, pl, ph: Math.random() * 6 }); }
+      for (const [x, y, z, c, r] of F.glow || []) { const pl = new THREE.PointLight(c, 60, (r || 8) * (L.size || 10) / 10, 1.4); pl.position.set(x, y, z); o.add(pl); fx.glows.push(pl); }
+      for (const [x, y, z] of F.steam || []) { const src = new THREE.Vector3(x, y, z); for (let i = 0; i < 10; i++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 1), new THREE.MeshBasicMaterial({ color: '#efe6df', transparent: true, opacity: 0, depthWrite: false })); q.userData = { src, t: i / 10 }; o.add(q); fx.steam.push(q); } }
+      if (L.interior) g.interiors.build(L, o);
+      this.landmarks.push({ ...L, obj: o, chest: { x: cx, z: cz }, fx });
+    }
+    // Регионы: тост при первом входе
+    this.regions = (W.features || []).filter(f => f.region === true);
     // Обломки купола у шаттла: лутаются один раз, дают ресурсы на купол базы
     this.wrecks = [];
     for (const d of W.dome_wreck || []) {
@@ -119,13 +140,14 @@ export class Explore {
           const stuck = Rw() < 0.5;
           m.position.set(x, w.heightAt(d.x + x, d.z + z) + (stuck ? 0.1 : 0.02), z);
           m.rotation.set(stuck ? -0.6 - Rw() * 0.9 : -Math.PI / 2 + (Rw() - 0.5) * 0.4, Rw() * 6.28, (Rw() - 0.5) * 0.5, 'YXZ'); m.castShadow = true; grp.add(m); }
+        mergeStatic(grp);   // 12 осколков → 3 меша (по материалу): −~9 draw call и −9 в теневом проходе на обломок
       }
       const wr = { ...d, key: 'wreck:' + d.id, obj: o, r: 2.8 * (d.scale || 1), done: !!g.state.looted['wreck:' + d.id] };
       this.wrecks.push(wr); g.player.addSolid(d.x, d.z, 1.4 * (d.scale || 1));
       if (wr.done) this.dimWreck(wr);
     }
     // Россыпь контейнеров и тел по карте
-    const free = () => { for (let a = 0; a < 40; a++) { const x = (R() - 0.5) * w.size * 0.75, z = (R() - 0.5) * w.size * 0.75; if (Math.hypot(x, z) < (W.debris.min_dist || 25) || w.slopeAt(x, z) > 0.3 || w.waterAt(x, z) > -50) continue; return [x, z]; } return null; };
+    const free = () => { for (let a = 0; a < 40; a++) { const S = Math.min(w.size, W.core || w.size), x = (R() - 0.5) * S * 0.75, z = (R() - 0.5) * S * 0.75; if (Math.hypot(x, z) < (W.debris.min_dist || 25) || w.slopeAt(x, z) > 0.3 || w.waterAt(x, z) > -50) continue; return [x, z]; } return null; };
     for (let i = 0; i < W.debris.crates; i++) { const q = free(); if (q) box('deb:c' + i, q[0], q[1], 'crate', 'Грузовой контейнер', 'loot_crate', R() * 6); }
     for (let i = 0; i < W.debris.bodies; i++) { const q = free(); if (q) box('deb:b' + i, q[0], q[1], 'body', 'Пропавший космонавт', 'suit_body', R() * 6); }
     // Кобальт — у обломков станции и в разломе
@@ -144,7 +166,7 @@ export class Explore {
     this.g.save();
   }
   nearestContainer() {
-    return this.g.pickNear(this.wrecks || [], 3.4, c => c.done) || this.g.pickNear(this.containers, 2.6, c => c.done);
+    const py = this.g.player.pos.y; return this.g.pickNear(this.wrecks || [], 3.4, c => c.done) || this.g.pickNear(this.containers, 2.6, c => c.done || (c.y != null && Math.abs(c.y - py) > 2));
   }
   async openContainer(c) {
     if (c.give) return this.openWreck(c);
@@ -249,6 +271,13 @@ export class Explore {
   // ---------- Кадр ----------
   update(dt) {
     const g = this.g, E = this.cfg.events, w = g.world, p = g.player.pos;
+    { const t = performance.now() / 1000; for (const L of this.landmarks || []) { if (!L.fx || Math.hypot(p.x - L.x, p.z - L.z) > 260) continue;
+      for (const l of L.fx.lights) { const on = Math.sin(t * 3 + l.ph) > 0 ? 1 : 0.25; l.m.material.color.copy(FX_RED).multiplyScalar(on * 2); l.pl.intensity = 40 * on; }
+      for (const pl of L.fx.glows) pl.intensity = 50 + 18 * Math.sin(t * 2.3) + Math.random() * 6;
+      for (const q of L.fx.steam) { const k = (q.userData.t + t * 0.12) % 1; q.position.copy(q.userData.src); q.position.x += Math.sin(k * 5 + q.userData.t * 9) * 0.4 + k * 1.2; q.position.y += k * 6; q.position.z += Math.cos(k * 4) * 0.3; q.scale.setScalar(0.4 + k * 2.4); q.material.opacity = 0.55 * Math.sin(k * Math.PI); } } }
+    for (const f of this.regions || []) { const d = f.rx ? Math.hypot((p.x - f.x) / f.rx, (p.z - f.z) / f.rz) : Math.hypot(p.x - f.x, p.z - f.z) / f.r;
+      const inside = d < 0.95; if (inside && this.curRegion !== f.id) { this.curRegion = f.id; const seen = (g.state.regions ||= {}); g.ui.banner?.(f.name, seen[f.id] ? '' : 'Новый регион открыт!') || g.ui.toast(`📍 ${f.name}`); if (!seen[f.id]) { seen[f.id] = 1; g.qa.event('region', { id: f.id }); g.save(); } }
+      else if (!inside && this.curRegion === f.id && d > 1.05) this.curRegion = null; }
     // Метеориты
     const MC = this.cfg.meteors;
     this.meteorClock = (this.meteorClock ?? MC.first_sec) - dt;
