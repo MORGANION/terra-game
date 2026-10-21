@@ -107,30 +107,37 @@ export class Player {
   // Стили выхлопа. base — два ровных оранжевых факела + серый дым. rocket — один атомный факел:
   // белое ядро, розовое пламя, малиновая оболочка, «ромбы» ударных волн, розовые искры и свет.
   buildJetFx() {
-    const old = this.jetFx; if (old) { old.group?.parent?.remove(old.group); old.parts.forEach(q => this.scene.remove(q)); old.light?.parent?.remove(old.light); }
+    const old = this.jetFx; if (old) { old.hw?.forEach(h => this.scene.remove(h)); old.group?.parent?.remove(old.group); old.parts.forEach(q => this.scene.remove(q)); old.light?.parent?.remove(old.light); }
     const J = this.char?.jet || { style: 'base', nozzles: [[0.2, -0.12, -0.08], [-0.2, -0.12, -0.08]] };
     const add = (c, o = 1, norm = false) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: norm ? THREE.NormalBlending : THREE.AdditiveBlending, depthWrite: false });
     const fx = this.jetFx = { char: this.char, J, style: J.style, k: 0, nozzles: [], parts: [], sparks: [], group: new THREE.Group() };
     this.scene.add(fx.group);
-    const rocket = J.style === 'rocket';
+    const rocket = J.style === 'rocket', ice = J.style === 'ice';
     for (const lp of J.nozzles) {
       const n = new THREE.Group(); n.userData.lp = new THREE.Vector3(...lp); fx.group.add(n); fx.group.renderOrder = 5;
       const L = rocket ? 1.3 : 0.6, layers = rocket
         ? [[0.2, L, '#b0106e', 0.8, true], [0.14, L * 0.88, '#ff3fa8', 0.95, true], [0.065, L * 0.6, '#fff0fa', 1]]
+        : ice ? [[0.1, L, '#1f78c8', 0.8, true], [0.065, L * 0.8, '#3fe0ff', 0.95, true], [0.032, L * 0.5, '#f2ffff', 1]]
         : [[0.12, L, '#e8480f', 0.85, true], [0.075, L * 0.75, '#ff9a1e', 0.95, true], [0.04, L * 0.5, '#fff1b8', 1]];
       for (const [r, h, c, o, nb] of layers) { const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 12, 4, true), add(c, o, nb)); m.renderOrder = 6; m.geometry.rotateX(Math.PI); m.geometry.translate(0, -h / 2, 0); /* широкий срез у сопла, острие вниз */ m.userData.o = o; n.add(m); }
       // кольцо сопла (раскалённый срез)
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(rocket ? 0.12 : 0.08, rocket ? 0.025 : 0.018, 6, 14), add(rocket ? '#ffb0e0' : '#ffd080', 1)); ring.rotation.x = Math.PI / 2; ring.userData.o = 1; n.add(ring);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(rocket ? 0.12 : 0.08, rocket ? 0.025 : 0.018, 6, 14), add(rocket ? '#ffb0e0' : ice ? '#b0f4ff' : '#ffd080', 1)); ring.rotation.x = Math.PI / 2; ring.userData.o = 1; n.add(ring);
       if (rocket) for (let i = 0; i < 4; i++) { const d = new THREE.Mesh(new THREE.OctahedronGeometry(0.11, 0), add('#ffffff', 1, true)); d.scale.set(1, 1.7, 1); d.renderOrder = 7; d.position.y = -0.22 - i * 0.26; d.userData.o = 0.9 - i * 0.18; d.userData.diamond = i; n.add(d); }
       fx.nozzles.push(n);
+      if (J.hardware) { const steel = new THREE.MeshStandardMaterial({ color: '#c9d3dc', metalness: 0.85, roughness: 0.28 }), dark = new THREE.MeshBasicMaterial({ color: '#0d1a24' });
+        const H = new THREE.Group(), cone = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.075, 0.16, 14, 1, true), steel); cone.material.side = THREE.DoubleSide; H.add(cone);
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 14), steel); cap.position.y = 0.08; H.add(cap);
+        const inner = new THREE.Mesh(new THREE.CircleGeometry(0.068, 14), dark); inner.rotation.x = Math.PI / 2; inner.position.y = -0.075; H.add(inner);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.074, 0.012, 6, 16), new THREE.MeshBasicMaterial({ color: '#3fe0ff' })); ring.rotation.x = Math.PI / 2; ring.position.y = -0.07; H.add(ring);
+        H.traverse(m => { m.castShadow = true; }); this.scene.add(H); (fx.hw ||= []).push(H); n.userData.hw = H; }
     }
-    const smoke = rocket ? '#f0c0dc' : '#eeeae4';
+    const smoke = rocket ? '#f0c0dc' : ice ? '#dff4ff' : '#eeeae4';
     for (let i = 0; i < (rocket ? 36 : 28); i++) { const q = new THREE.Mesh(new THREE.IcosahedronGeometry(rocket ? 0.11 : 0.09, 1), new THREE.MeshBasicMaterial({ color: smoke, transparent: true, opacity: 0.5, depthWrite: false })); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.parts.push(q); }
     if (rocket) for (let i = 0; i < 40; i++) { const q = new THREE.Mesh(new THREE.TetrahedronGeometry(0.035, 0), add(i % 3 ? '#ff7ac8' : '#ffffff', 1, true)); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.sparks.push(q); }
-    fx.light = new THREE.PointLight(rocket ? '#ff5cb8' : '#ffa040', 0, rocket ? 9 : 6, 1.6); fx.group.add(fx.light);
+    fx.light = new THREE.PointLight(rocket ? '#ff5cb8' : ice ? '#5ad8ff' : '#ffa040', 0, rocket ? 9 : 6, 1.6); fx.group.add(fx.light);
   }
   updateJetFx(dt) {
-    const fx = this.jetFx; if (!fx) return; const rocket = fx.style === 'rocket';
+    const fx = this.jetFx; if (!fx) return; const rocket = fx.style === 'rocket', ice = fx.style === 'ice';
     fx.k += ((this.jetting ? 1 : 0) - fx.k) * Math.min(1, dt * 14);
     if (fx.B === undefined) {   // кость ранца и bind-матрица «тело → кость» по позе привязки (не зависит от текущей анимации)
       fx.B = null; let sm = null; this.char?.root.traverse(o => { if (!sm && o.isSkinnedMesh) sm = o; });
@@ -144,6 +151,7 @@ export class Player {
     for (const n of fx.nozzles) {
       n.visible = on; n.position.copy(n.userData.lp); if (B) { n.position.applyMatrix4(fx.bind); B.localToWorld(n.position); } else this.obj.localToWorld(n.position); n.quaternion.setFromAxisAngle(UPV, this.obj.rotation.y);   // струя строго вниз по миру
       wp.push(n.position);
+      if (n.userData.hw) { const H = n.userData.hw; H.visible = this.obj.visible; H.position.copy(n.position); H.position.y += 0.075; H.quaternion.copy(n.quaternion); }
       if (!on) continue;
       const flick = rocket ? 0.85 + Math.sin(t * 47) * 0.08 + Math.random() * 0.15 : 0.6 + Math.random() * 0.5;
       for (const m of n.children) { m.material.opacity = m.userData.o * fx.k;
@@ -153,12 +161,12 @@ export class Player {
     // направление струи — «вниз» кости в мире
     down.set(0, -1, 0).applyQuaternion(fx.nozzles[0]?.quaternion || this.obj.quaternion);
     fx.light.position.copy(wp[0] || this.pos).addScaledVector(down, rocket ? 0.6 : 0.3); if (fx.light.parent !== this.scene) { fx.group.remove(fx.light); this.scene.add(fx.light); }
-    fx.light.intensity = fx.k * (rocket ? 90 + Math.random() * 30 : 40 + Math.random() * 15);
+    fx.light.intensity = fx.k * (rocket ? 90 + Math.random() * 30 : ice ? 12 + Math.random() * 5 : 40 + Math.random() * 15);
     fx.emit = (fx.emit || 0) + dt * (rocket ? 50 : 40) * (this.jetting ? 1 : 0);
     while (fx.emit > 1 && wp.length) { fx.emit--; const q = fx.parts.find(p => p.userData.life <= 0); if (!q) break; const src = wp[(Math.random() * wp.length) | 0];
       q.position.copy(src).addScaledVector(down, rocket ? 1.0 : 0.55); q.userData.v = down.clone().multiplyScalar(3 + Math.random() * 2).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, (Math.random() - 0.5) * 0.8)); q.userData.life = 0.6 + Math.random() * 0.3; q.visible = true; q.scale.setScalar(0.6); }
     for (const q of fx.parts) { if (q.userData.life <= 0) continue; q.userData.life -= dt; q.position.addScaledVector(q.userData.v, dt); q.userData.v.multiplyScalar(1 - dt * 2.5); q.userData.v.y += dt * 1.5; q.scale.multiplyScalar(1 + dt * 2.2); q.material.opacity = Math.max(0, q.userData.life) * 0.7;
-      if (rocket) q.material.color.setHSL(0.9 + q.userData.life * 0.03, 0.55, 0.62 + q.userData.life * 0.2); else q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; }
+      if (rocket) q.material.color.setHSL(0.9 + q.userData.life * 0.03, 0.55, 0.62 + q.userData.life * 0.2); else if (fx.style === 'ice') q.material.color.setHSL(0.54, 0.2 + q.userData.life * 0.5, 0.7 + q.userData.life * 0.2); else q.material.color.setHSL(0.08, 0.15 + q.userData.life * 0.6, 0.55 + q.userData.life * 0.3); if (q.userData.life <= 0) q.visible = false; }
     if (rocket) { fx.sp = (fx.sp || 0) + dt * 70 * (this.jetting ? 1 : 0);
       while (fx.sp > 1 && wp.length) { fx.sp--; const q = fx.sparks.find(p => p.userData.life <= 0); if (!q) break; q.position.copy(wp[0]).addScaledVector(down, 0.3 + Math.random() * 0.8);
         q.userData.v = down.clone().multiplyScalar(4 + Math.random() * 4).add(new THREE.Vector3((Math.random() - 0.5) * 4, Math.random() * 1.5, (Math.random() - 0.5) * 4)); q.userData.life = 0.25 + Math.random() * 0.35; q.visible = true; }

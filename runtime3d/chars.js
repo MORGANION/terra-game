@@ -67,9 +67,40 @@ function rigidify(model, rules) {
   });
 }
 
+// Стекло визора: тёмно-синие пиксели текстуры в зоне головы → отражение неба (по нормали), френель-кайма и блик.
+// visor: { y: доля высоты меша, выше которой голова (0.62) }. Маска головы — атрибут вершин, края визора — по цвету текстуры.
+function glassVisor(o, V) {
+  const g = o.geometry, P = g.attributes.position;
+  // маска — коробка визора в метрах в системе персонажа (после скиннинга в позе привязки): только лицевая часть шлема
+  const [lo, hi] = V.box, R = V.root; R.updateMatrixWorld(true); const inv = R.matrixWorld.clone().invert(), T = new THREE.Vector3();
+  const head = new Float32Array(P.count); for (let i = 0; i < P.count; i++) { o.getVertexPosition(i, T); T.applyMatrix4(o.matrixWorld).applyMatrix4(inv); head[i] = T.x > lo[0] && T.x < hi[0] && T.y > lo[1] && T.y < hi[1] && T.z > lo[2] && T.z < hi[2] ? 1 : 0; }
+  g.setAttribute('aHead', new THREE.BufferAttribute(head, 1));
+  const m = o.material;
+  // Маска стекла: синие пиксели (b > r) в зоне визора, светлая оболочка исключена.
+  // Отражение по направлению R.y: тёмный грунт → тёплый горизонт → красное небо Марса; тонированное тёмное стекло,
+  // френель-кайма, широкий мягкий блик + точечный. Комментарии — только здесь: «//» внутри GLSL-строки съест код.
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aHead; varying float vHead;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvHead = aHead;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vHead; float gVis;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+  { vec3 c = diffuseColor.rgb; gVis = vHead * smoothstep(0.02, 0.12, c.b - c.r) * (1.0 - smoothstep(0.5, 0.7, min(c.r, c.g))); }`)
+      .replace('#include <opaque_fragment>', `{ vec3 Nv = normalize(normal), Vv = normalize(vViewPosition);
+    float fr = smoothstep(0.35, 0.95, pow(1.0 - clamp(dot(Nv, Vv), 0.0, 1.0), 1.6)) * 0.6;
+    vec3 R = reflect(-Vv, Nv); float sky = clamp(R.y * 0.6 + 0.5, 0.0, 1.0);
+    vec3 ground = mix(vec3(0.22, 0.08, 0.04), vec3(0.62, 0.26, 0.1), smoothstep(0.1, 0.48, sky));
+    vec3 heaven = mix(vec3(1.0, 0.58, 0.32), vec3(0.62, 0.22, 0.14), smoothstep(0.6, 0.95, sky));
+    vec3 refl = mix(ground, heaven, smoothstep(0.47, 0.53, sky));
+    float sp = pow(max(dot(R, normalize(vec3(-0.45, 0.55, 0.7))), 0.0), 40.0) * 1.6 + pow(max(dot(R, normalize(vec3(-0.3, 0.62, 0.72))), 0.0), 300.0) * 4.0 + pow(max(dot(R, normalize(vec3(0.5, 0.3, 0.8))), 0.0), 10.0) * 0.25;
+    vec3 glass = vec3(0.02, 0.05, 0.13) + refl * refl * 0.55 + fr * vec3(0.35, 0.75, 1.0) * 1.4 + vec3(sp) * 1.2;
+    outgoingLight = mix(outgoingLight, glass, gVis); }
+#include <opaque_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'visor';
+}
+
 // Экземпляр персонажа: { root, play(name), update(dt) }. height — рост в метрах.
 export function makeCharacter(gltf, opts = {}) {
-  const { height = 1.6, outline = 0.012, toon = true } = opts;
+  const { height = 1.6, outline = 0.012, toon = true } = opts;   // + visor: {y} — стеклянный визор шейдером
   const root = new THREE.Group();
   const model = skClone(gltf.scene);
   // Модели «лёжа» (Z-up у четвероногих из Tripo Other-рига) — поднять на ноги
@@ -89,6 +120,7 @@ export function makeCharacter(gltf, opts = {}) {
       o.material = new THREE.MeshToonMaterial({ map: src.map, color: src.color || 0xffffff, gradientMap: toonGradient() });
       if (o.material.map) o.material.map.colorSpace = THREE.SRGBColorSpace;
     }
+
     // Контур: копия меша с BackSide, раздутая вдоль нормалей
     if (outline && o.isSkinnedMesh) {
       const om = new THREE.MeshBasicMaterial({ color: '#1b1210', side: THREE.BackSide });
@@ -100,6 +132,7 @@ export function makeCharacter(gltf, opts = {}) {
   // Tripo смотрит в -Z, игра ждёт «лицо» к +Z
   if (opts.flip) model.rotation.y = Math.PI;
   root.add(model);
+  if (opts.visor) model.traverse(o => { if (o.isSkinnedMesh && o.name !== 'outline') glassVisor(o, { ...opts.visor, root }); });
   const mixer = new THREE.AnimationMixer(model);
   // Root motion из Mixamo/Tripo (бёдра уезжают вперёд за цикл и прыгают назад) — движение делает игра,
   // поэтому горизонтальный дрейф корневой кости вычитаем: оставляем только покачивание вокруг среднего.

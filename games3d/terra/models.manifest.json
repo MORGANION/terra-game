@@ -631,6 +631,52 @@
           ]
         ]
       }
+    },
+    "skin_ice": {
+      "url": "assets/skin_ice.glb",
+      "height": 1.7,
+      "outline": 0.012,
+      "anims": {
+        "idle": "idle.001",
+        "walk": "walk.001",
+        "run": "run.001",
+        "jump": "jump.001",
+        "fall": "fall.001",
+        "mine": "dig.001",
+        "cheer": "cheer.001",
+        "wave": "greet_01.001"
+      },
+      "skin": true,
+      "jet": {
+        "style": "ice",
+        "nozzles": [
+          [
+            0.17,
+            0.58,
+            -0.24
+          ],
+          [
+            -0.17,
+            0.58,
+            -0.24
+          ]
+        ],
+        "hardware": true
+      },
+      "visor": {
+        "box": [
+          [
+            -0.22,
+            1.21,
+            0.14
+          ],
+          [
+            0.22,
+            1.6,
+            0.45
+          ]
+        ]
+      }
     }
   },
   "props": [
