@@ -107,7 +107,7 @@ export class Player {
   // Стили выхлопа. base — два ровных оранжевых факела + серый дым. rocket — один атомный факел:
   // белое ядро, розовое пламя, малиновая оболочка, «ромбы» ударных волн, розовые искры и свет.
   buildJetFx() {
-    const old = this.jetFx; if (old) { old.pack?.parent?.remove(old.pack); old.group?.parent?.remove(old.group); old.parts.forEach(q => this.scene.remove(q)); old.light?.parent?.remove(old.light); }
+    const old = this.jetFx; if (old) { old.holders?.forEach(h => h.parent?.remove(h)); old.group?.parent?.remove(old.group); old.parts.forEach(q => this.scene.remove(q)); old.light?.parent?.remove(old.light); }
     const J = this.char?.jet || { style: 'base', nozzles: [[0.2, -0.12, -0.08], [-0.2, -0.12, -0.08]] };
     const add = (c, o = 1, norm = false) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: norm ? THREE.NormalBlending : THREE.AdditiveBlending, depthWrite: false });
     const fx = this.jetFx = { char: this.char, J, style: J.style, k: 0, nozzles: [], parts: [], sparks: [], group: new THREE.Group() };
@@ -130,38 +130,6 @@ export class Player {
     if (rocket) for (let i = 0; i < 40; i++) { const q = new THREE.Mesh(new THREE.TetrahedronGeometry(0.035, 0), add(i % 3 ? '#ff7ac8' : '#ffffff', 1, true)); q.visible = false; q.userData.life = 0; this.scene.add(q); fx.sparks.push(q); }
     fx.light = new THREE.PointLight(rocket ? '#ff5cb8' : ice ? '#5ad8ff' : '#ffa040', 0, rocket ? 9 : 6, 1.6); fx.group.add(fx.light);
   }
-  // Ранец кодом (скин с pack): корпус, 2 бака, 2 стальных сопла, бирюзовые вставки — одна жёсткая группа на кости Spine2.
-  // Строится в системе персонажа (метры), привязка — fx.bind (тело → кость), поэтому не гнётся при ходьбе. Сопла выхлопа — дети группы.
-  buildPack(fx, B) {
-    const P = this.char.pack, G = new THREE.Group(), grad = new THREE.DataTexture(new Uint8Array([110, 190, 255]), 3, 1, THREE.RedFormat); grad.needsUpdate = true;
-    const toon = c => new THREE.MeshToonMaterial({ color: c, gradientMap: grad }), glow = c => new THREE.MeshBasicMaterial({ color: c });
-    const W = toon('#eef3f8'), BL = toon('#2f6fd0'), ST = new THREE.MeshStandardMaterial({ color: '#c9d3dc', metalness: 0.8, roughness: 0.3 }), GL = glow('#3fe0ff'), DK = glow('#0b1620');
-    const [cx, cy, cz] = P.at || [0, 0.8, -0.25], add = (geo, mat, x, y, z, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(cx + x, cy + y, cz + z); m.rotation.x = rx; m.castShadow = true; G.add(m); return m; };
-    const rb = (w, h, d, r) => { const g = new THREE.BoxGeometry(w, h, d, 2, 2, 2), p = g.attributes.position, v = new THREE.Vector3(); for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const k = Math.max(Math.abs(v.x) / (w / 2), Math.abs(v.y) / (h / 2), Math.abs(v.z) / (d / 2)); if (k > 0.99) { const q = v.clone().multiply(new THREE.Vector3(2 / w, 2 / h, 2 / d)); if (Math.abs(q.x) > 0.99 && Math.abs(q.y) > 0.99) v.x *= 1 - r, v.y *= 1 - r; if (Math.abs(q.y) > 0.99 && Math.abs(q.z) > 0.99) v.z *= 1 - r; } p.setXYZ(i, v.x, v.y, v.z); } g.computeVertexNormals(); return g; };
-    // корпус: белый скруглённый блок, синяя спинка-«хребет», бирюзовые полосы и экран заряда
-    add(rb(0.3, 0.42, 0.14, 0.18), W, 0, 0, 0);
-    add(rb(0.34, 0.2, 0.16, 0.3), W, 0, 0.23, 0.005);   // верхняя крышка-«хомут» до основания шлема: закрывает остаток ранца модели
-    add(new THREE.BoxGeometry(0.2, 0.025, 0.012), BL, 0, 0.27, -0.078);
-    add(new THREE.BoxGeometry(0.1, 0.36, 0.02), BL, 0, 0.01, -0.075);
-    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.018, 0.3, 0.012), GL, sx * 0.075, 0.0, -0.082);
-    add(new THREE.BoxGeometry(0.07, 0.05, 0.012), GL, 0, 0.13, -0.088);
-    // баки: цилиндры с синими кольцами и куполками
-    for (const sx of [-1, 1]) { const x = sx * 0.19;
-      add(new THREE.CylinderGeometry(0.072, 0.072, 0.4, 16), W, x, 0.0, -0.01);
-      add(new THREE.SphereGeometry(0.072, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), W, x, 0.2, -0.01);
-      for (const y of [0.13, -0.05, -0.17]) add(new THREE.CylinderGeometry(0.076, 0.076, 0.03, 16), BL, x, y, -0.01);
-      // сопло: стальной раструб + тёмный срез + бирюзовое кольцо; точка выхлопа — на срезе
-      add(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 14), ST, x, -0.215, -0.01);
-      add(new THREE.CylinderGeometry(0.045, 0.075, 0.13, 14, 1, true), ST, x, -0.295, -0.01).material.side = THREE.DoubleSide;
-      add(new THREE.CircleGeometry(0.07, 14), DK, x, -0.358, -0.01, Math.PI / 2);
-      add(new THREE.TorusGeometry(0.074, 0.011, 6, 16), GL, x, -0.356, -0.01, Math.PI / 2); }
-    // контур как у персонажа
-    const ol = new THREE.MeshBasicMaterial({ color: '#1b1210', side: THREE.BackSide }); ol.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(objectNormal) * 0.008;'); };
-    for (const m of [...G.children]) if (m.material !== GL && m.material !== DK) { const o = new THREE.Mesh(m.geometry, ol); o.position.copy(m.position); o.rotation.copy(m.rotation); G.add(o); }
-    // сопла выхлопа переносим внутрь группы: точно на срезы, направление — вниз по ранцу
-    fx.nozzles.forEach((n, i) => { const sx = i % 2 ? -1 : 1; n.position.set(cx + sx * 0.19, cy - 0.36, cz - 0.01); n.quaternion.identity(); G.add(n); });
-    G.matrixAutoUpdate = false; G.matrix.copy(fx.bind); B.add(G); fx.pack = G;
-  }
   updateJetFx(dt) {
     const fx = this.jetFx; if (!fx) return; const rocket = fx.style === 'rocket', ice = fx.style === 'ice';
     fx.k += ((this.jetting ? 1 : 0) - fx.k) * Math.min(1, dt * 14);
@@ -171,12 +139,13 @@ export class Player {
       if (bi >= 0) { fx.B = sm.skeleton.bones[bi]; this.obj.updateMatrixWorld(true);
         fx.bind = sm.skeleton.boneInverses[bi].clone().multiply(sm.bindMatrix).multiply(sm.matrixWorld.clone().invert()).multiply(this.obj.matrixWorld); }
     }
+    // Сопла — дети кости ранца (Spine2) через матрицу привязки: точка выхлопа жёстко на ранце модели в любой позе
+    if (fx.B && !fx.mounted) { fx.mounted = true; for (const n of fx.nozzles) { const h = new THREE.Group(); h.matrixAutoUpdate = false; h.matrix.copy(fx.bind).multiply(new THREE.Matrix4().makeTranslation(n.userData.lp)); fx.B.add(h); h.add(n); n.position.set(0, 0, 0); n.quaternion.identity(); fx.holders = (fx.holders || []).concat(h); } }
     const B = fx.B, down = new THREE.Vector3();
     if (B) B.updateWorldMatrix(true, false);
-    if (B && this.char?.pack && !fx.pack) this.buildPack(fx, B);
     const t = performance.now() / 1000, on = fx.k > 0.04, wp = [];
     for (const n of fx.nozzles) {
-      if (fx.pack) { n.visible = on; n.getWorldPosition(n.userData.wp ||= new THREE.Vector3()); wp.push(n.userData.wp); }
+      if (fx.mounted) { n.visible = on; n.getWorldPosition(n.userData.wp ||= new THREE.Vector3()); wp.push(n.userData.wp); }
       else { n.visible = on; n.position.copy(n.userData.lp); if (B) { n.position.applyMatrix4(fx.bind); B.localToWorld(n.position); } else this.obj.localToWorld(n.position); n.quaternion.setFromAxisAngle(UPV, this.obj.rotation.y);   // струя строго вниз по миру
       wp.push(n.position); }
       if (!on) continue;
@@ -186,7 +155,7 @@ export class Player {
         if (m.userData.diamond !== undefined) { const ph = (t * 6 + m.userData.diamond * 0.7) % 1; m.scale.setScalar(0.7 + 0.5 * Math.sin(ph * Math.PI)); m.material.opacity = m.userData.o * fx.k * (0.6 + 0.4 * Math.sin(t * 30 + m.userData.diamond)); } }
     }
     // направление струи — «вниз» кости в мире
-    if (fx.pack) { fx.nozzles[0].getWorldQuaternion(fx._q ||= new THREE.Quaternion()); down.set(0, -1, 0).applyQuaternion(fx._q); } else down.set(0, -1, 0).applyQuaternion(fx.nozzles[0]?.quaternion || this.obj.quaternion);
+    if (fx.mounted) { fx.nozzles[0].getWorldQuaternion(fx._q ||= new THREE.Quaternion()); down.set(0, -1, 0).applyQuaternion(fx._q); } else down.set(0, -1, 0).applyQuaternion(fx.nozzles[0]?.quaternion || this.obj.quaternion);
     fx.light.position.copy(wp[0] || this.pos); if (wp[1]) fx.light.position.lerp(wp[1], 0.5); fx.light.position.addScaledVector(down, rocket ? 0.9 : 0.9);   // ниже тела: подсвечивает землю, а не выжигает скафандр if (fx.light.parent !== this.scene) { fx.group.remove(fx.light); this.scene.add(fx.light); }
     fx.light.intensity = fx.k * (rocket ? 90 + Math.random() * 30 : ice ? 3 + Math.random() * 1.5 : 14 + Math.random() * 5);
     fx.emit = (fx.emit || 0) + dt * (rocket ? 50 : 40) * (this.jetting ? 1 : 0);
