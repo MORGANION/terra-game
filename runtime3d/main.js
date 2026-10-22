@@ -104,7 +104,7 @@ async function boot() {
   // Скины героя: персонажи из манифеста с флагом skin; грузятся по требованию
   const skinChars = { hero: heroChar };
   game_skinLoad = async id => { if (skinChars[id]) return skinChars[id]; const C = man.characters?.[id]; if (!C) return null;
-    const { loadCharacter, makeCharacter } = await import('./chars.js'); const c = makeCharacter(await loadCharacter(C.url), C); c.anims = C.anims; c.jet = C.jet; return (skinChars[id] = c); };
+    const { loadCharacter, makeCharacter } = await import('./chars.js'); const c = makeCharacter(await loadCharacter(C.url), C); c.anims = C.anims; c.jet = C.jet; c.pack = C.pack; return (skinChars[id] = c); };
   UI.applyScale(); addEventListener('resize', () => UI.applyScale());
   const ui = new UI(cfg);
   const game = new Game({ scene, world, models, player, cfg, platform: Platform, ui, qa: QA });

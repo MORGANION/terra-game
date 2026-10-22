@@ -133,6 +133,12 @@ export function makeCharacter(gltf, opts = {}) {
   if (opts.flip) model.rotation.y = Math.PI;
   root.add(model);
   if (opts.visor) model.traverse(o => { if (o.isSkinnedMesh && o.name !== 'outline') glassVisor(o, { ...opts.visor, root }); });
+  // cut: [[x0,y0,z0],[x1,y1,z1]] в метрах (система персонажа, поза привязки) — убрать треугольники кривого ранца Tripo; вместо него ранец кодом
+  if (opts.cut) model.traverse(o => { if (!o.isSkinnedMesh || o.name === 'outline' || !o.geometry.index || o.geometry.userData.cutDone) return;
+    const g = o.geometry, n = g.attributes.position.count, inv = root.matrixWorld.clone().invert(), T = new THREE.Vector3(), inb = new Uint8Array(n);
+    root.updateMatrixWorld(true); for (let i = 0; i < n; i++) { o.getVertexPosition(i, T); T.applyMatrix4(o.matrixWorld).applyMatrix4(inv); inb[i] = opts.cut.some(([a, c]) => T.x > a[0] && T.x < c[0] && T.y > a[1] && T.y < c[1] && T.z > a[2] && T.z < c[2]) ? 1 : 0; }
+    const I = g.index.array, keep = []; for (let t = 0; t < I.length; t += 3) if (!(inb[I[t]] && inb[I[t + 1]] && inb[I[t + 2]])) keep.push(I[t], I[t + 1], I[t + 2]);
+    g.setIndex(keep); g.userData.cutDone = true; });
   const mixer = new THREE.AnimationMixer(model);
   // Root motion из Mixamo/Tripo (бёдра уезжают вперёд за цикл и прыгают назад) — движение делает игра,
   // поэтому горизонтальный дрейф корневой кости вычитаем: оставляем только покачивание вокруг среднего.
