@@ -702,3 +702,13 @@ body.suffo .bar.o2,body.suffo .bar.hp{background:rgba(38,21,15,.95)}
   .sh-ads{font-size:12.5px;text-wrap:balance}
 }
 .sh-hero p,.sh-ads{text-wrap:balance}
+
+/* выбор скина марсохода */
+.rpick{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+.rpcard{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border:3px solid var(--ink);border-radius:14px;background:var(--card,#fff7ea);cursor:pointer;box-shadow:0 5px 0 var(--ink)}
+.rpcard canvas{width:220px;height:134px;border-radius:10px;background:radial-gradient(#ffe9c8,#f3c48e)}
+.rpcard:hover{transform:translateY(-2px)}
+.rpcard b{font-size:15px}
+
+/* пока открыт диалог (выбор, лут, черта) — подсказки не перекрывают его */
+body:has(#dialog[style*="flex"]) .coach{display:none!important}

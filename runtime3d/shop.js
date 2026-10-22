@@ -59,7 +59,6 @@ export class Shop {
     const g = this.g, id = g.state.theme, T = id === 'default' ? null : this.M.themes?.[id];
     const mark = o => { if (!o) return false; if (!force && o.userData.theme === id) return false; o.userData.theme = id; return true; };
     // скафандр и марсоход шейдером НЕ перекрашиваем (выглядит плохо) — только готовые модели наборов
-    for (const V of g.vehicles || []) if (mark(V.obj)) { this.swapRover(V, T?.rover_model); }
     const B = g.builder; if (!B) return;
     for (const D of B.domes || []) if (mark(D.obj)) this.paintBuild(D.obj, T, id);
     for (const o of B.mobjs?.values() || []) if (mark(o)) this.paintBuild(o, T, id);
@@ -85,6 +84,8 @@ export class Shop {
     if (G.theme) this.setTheme(G.theme);
     if (G.style) this.setStyle(G.style);
     if (G.creative) { g.state.creativeOn = true; this.applyCreative(); }
+    if (G.skin) { (g.state.skins ??= {})[G.skin] = true; g.skins?.wear(G.skin); }   // сразу надеть купленный скафандр
+    if (G.rover && G.bps?.length) { const rec = g.cfg.recipes.find(r => r.vehicle && G.bps.includes(r.needs_bp)); if (rec) g.spawnVehicleNear(rec.id, G.rover); }   // марсоход — перед игроком
   }
 
   // ---------- Витрина ----------

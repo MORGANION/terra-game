@@ -350,7 +350,10 @@ export class UI {
         b.innerHTML = r.build ? this.T.build : r.upgrade ? 'Улучшить' : 'Создать';
         b.disabled = s.locked || !s.affordable || (!r.build && !near);
         if (r.build === '__dome') b.innerHTML = 'Собрать';
-        b.onpointerdown = e => { e.stopPropagation(); if (b.disabled) return; if (g.craft(r.id)) { if (r.build) this.close(); else this.renderCraft(); } };
+        b.onpointerdown = async e => { e.stopPropagation(); if (b.disabled) return;
+          const skins = r.vehicle ? g.roverSkins() : [];
+          if (skins.length > 1) { this.close(); const m = await this.roverPick(skins); if (m) g.craft(r.id, false, { model: m }); return; }
+          if (g.craft(r.id)) { if (r.build) this.close(); else this.renderCraft(); } };
       }
       row.append(b); body.append(row);
     } catch (e) { (window.__qa?.errors || []).push('craft ' + r.id + ': ' + e.message); } }
@@ -469,11 +472,32 @@ export class UI {
     this.el('toasts').prepend(document.createElement('span'));
     this.toast(`${ic('check')} <b>${G.text}</b> — готово! ${Object.entries(G.reward).map(([k, v]) => `${itemIcon(k, g.cfg.items[k])}+${v}`).join(' ')}`, 'rar-legendary');
     const box = this.el('goal'); box.classList.remove('done'); void box.offsetWidth; box.classList.add('done');
-    const conf = document.createElement('div'); conf.className = 'confetti';
-    const r = box.getBoundingClientRect();
-    for (let i = 0; i < 28; i++) { const c = document.createElement('i'); c.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--dx:${(Math.random() - 0.5) * 320}px;--dy:${-60 - Math.random() * 200}px;--r:${Math.random() * 720}deg;background:${['#ffcf4a', '#5cd6a8', '#f58a3c', '#6cc8ff', '#ff7aa8'][i % 5]};animation-delay:${Math.random() * 0.1}s`; conf.append(c); }
-    document.body.append(conf); setTimeout(() => conf.remove(), 1500);
+    this.confetti(box.getBoundingClientRect());
     g.player.emoteOnce?.('cheer', 1.6);
+  }
+  confetti(r, n = 28) {
+    const conf = document.createElement('div'); conf.className = 'confetti';
+    for (let i = 0; i < n; i++) { const c = document.createElement('i'); c.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top + r.height / 2}px;--dx:${(Math.random() - 0.5) * 320}px;--dy:${-60 - Math.random() * 200}px;--r:${Math.random() * 720}deg;background:${['#ffcf4a', '#5cd6a8', '#f58a3c', '#6cc8ff', '#ff7aa8'][i % 5]};animation-delay:${Math.random() * 0.1}s`; conf.append(c); }
+    document.body.append(conf); setTimeout(() => conf.remove(), 1500);
+  }
+  // Покупка: конфетти по всему экрану, вспышка, тост, радость астронавта
+  celebrate(title) {
+    this.flash('#ffcf4a'); this.shake(0.12);
+    const W = innerWidth, H = innerHeight;
+    for (const [x, y] of [[0.5, 0.45], [0.25, 0.6], [0.75, 0.6]]) this.confetti({ left: W * x - 40, top: H * y - 20, width: 80, height: 40 }, 32);
+    this.toast(`${ic('star')} <b>${title}</b> — твоё! Уже применено`, 'rar-legendary');
+    this.g.player.emoteOnce?.('cheer', 3);
+  }
+  // Выбор скина марсохода перед постройкой (если доступно больше одного): карточки с 3D-превью
+  roverPick(list) {
+    return new Promise(res => {
+      const d = this.el('dialog'); d.style.display = 'flex'; window.__qa.state = 'dialog';
+      const card = d.firstElementChild; card.className = 'card';
+      card.innerHTML = `<h2>Какой марсоход собрать?</h2><div class="rpick">${list.map(v => `<button class="rpcard" id="b_rover_${v.id}"><canvas width="360" height="220"></canvas><b>${v.name}</b></button>`).join('')}</div><div class="dbtns"><button class="btn" id="b_rover_cancel">Отмена</button></div>`;
+      const done = v => { d.style.display = 'none'; window.__qa.state = 'playing'; res(v); };
+      for (const v of list) { const b = card.querySelector('#b_rover_' + v.id); b.onpointerdown = e => { e.stopPropagation(); done(v.id); }; this.g.previewModel?.(b.querySelector('canvas'), v.id); }
+      card.querySelector('#b_rover_cancel').onpointerdown = e => { e.stopPropagation(); done(null); };
+    });
   }
   flash(color) { const f = this.el('flash'); f.style.background = `radial-gradient(circle, ${color}cc 0%, ${color}00 70%)`; f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
   renderStore() { this.g.shop.render(this); }
@@ -546,7 +570,7 @@ export class UI {
     row('Ресурсы на марсоход', () => { g.give?.({}) ; for (const [k, v] of Object.entries({ iron: 20, silicon: 8, titanium: 4, cobalt: 4 })) g.state.inv[k] = (g.state.inv[k] || 0) + v; }, '20 железа, 8 кремния, 4 титана, 4 кобальта');
     row('Поставить марсоход рядом', () => { const r = g.cfg.recipes.find(x => x.id === 'rover'), p = g.player.pos, f = g.player.forward(); const b = { model: 'rover', recipe: 'rover', x: +(p.x + f.x * 4).toFixed(2), z: +(p.z + f.z * 4).toFixed(2), rot: g.player.obj.rotation.y }; g.state.buildings.push(b); g.spawnBuilding(b, true); g.save(); }, 'без ресурсов, сразу перед героем');
     row('Скафандр «Иней» (ледяной набор)', async () => { (g.state.skins ??= {}).skin_ice = true; await g.skins.wear('skin_ice'); g.player.devJet = true; this.close?.(); }, 'надеть новый скафандр + джетпак без ограничений (Пробел в воздухе)');
-    row('Ледяной набор: марсоход «Айсберг»', () => { g.state.flags.theme_ice = true; g.state.bps.rover = 1; g.shop.setTheme('ice'); const p = g.player.pos, f = g.player.forward(); const b = { model: 'rover', recipe: 'rover', x: +(p.x + f.x * 5).toFixed(2), z: +(p.z + f.z * 5).toFixed(2), rot: g.player.yaw + Math.PI }; g.state.buildings.push(b); g.spawnBuilding(b, true); g.shop.retheme(true); g.save(); this.close?.(); }, 'включает тему «Лёд» и ставит марсоход перед тобой — садись на E');
+    row('Ледяной набор: марсоход «Айсберг»', () => { g.state.flags.theme_ice = true; g.state.bps.rover = 1; g.spawnVehicleNear('rover', 'rover_ice'); this.close?.(); }, 'ставит «Айсберг» перед тобой — садись на E; при крафте марсохода теперь будет выбор скина');
     row('Джетпак 1 уровня', () => { const st = g.state; st.bps.jet = Math.max(st.bps.jet || 0, 1); st.gear.jet = Math.max(st.gear.jet || 0, 1); g.explore.applyGear(); g.player.jetFuel = g.player.jetFuelMax; g.save(); }, (g.state.gear?.jet || 0) >= 1 ? 'уже есть — двойной прыжок (Пробел в воздухе)' : 'чертёж + сразу надет, без ресурсов');
     row('ТП: Кольцевая станция (блокинг)', () => { const P = g.player, x = 255 - 105, z = -250 + 20; P.pos.set(x, g.world.heightAt(x, z) + 1, z); P.vel.set(0, 0, 0); P.resetFall(3); });
     row('ТП: Ледяная шахта (блокинг)', () => { const P = g.player, x = 292 - 26, z = -172; P.pos.set(x, g.world.heightAt(x, z) + 1, z); P.vel.set(0, 0, 0); P.resetFall(3); });

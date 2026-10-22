@@ -197,7 +197,7 @@ export class Game {
     this.player.addSolid(b.x, b.z, 0.8);
     const R = this.cfg.recipes.find(r => r.id === b.recipe);
     if (b.recipe === 'workbench') (this.workbenches ||= []).push({ x: b.x, z: b.z });
-    if (R?.vehicle) { this.vehicles ??= []; const V = { b, obj: o, cfg: this.cfg.vehicles[b.recipe], speed: 0 }; V.body = new VehicleBody(this, V); V.body.apply(); queueMicrotask(() => this.applyUpgrades()); try { rigWheels(V); } catch (e) { (window.__qa?.errors || []).push('wheels: ' + e.message); } this.vehicles.push(V); return o; }
+    if (R?.vehicle) { this.vehicles ??= []; const V = { b, obj: o, cfg: this.cfg.vehicles[b.recipe], speed: 0, modelId: b.model }; V.body = new VehicleBody(this, V); V.body.apply(); queueMicrotask(() => this.applyUpgrades()); try { rigWheels(V); } catch (e) { (window.__qa?.errors || []).push('wheels: ' + e.message); } this.vehicles.push(V); return o; }
     if (R?.storage) this.storages.push({ key: 'b:' + b.x.toFixed(2) + ',' + b.z.toFixed(2), x: b.x, z: b.z, slots: R.storage, name: R.name });
     if (fresh) { o.scale.setScalar(0.01); this.pop = this.pop || []; this.pop.push({ o, t: 0 }); }
     // Светящаяся «колонна» выхлопа над машиной
@@ -458,14 +458,14 @@ export class Game {
     const n = this.state.buildings.filter(b => b.recipe === r.id).length, k = Math.pow(this.cfg.build_cost_growth || 1, n);
     return Object.fromEntries(Object.entries(r.cost).map(([a, v]) => [a, Math.ceil(v * k)]));
   }
-  craft(id, instant = false) {
+  craft(id, instant = false, opt = {}) {
     const r = this.cfg.recipes.find(x => x.id === id);
     if (!r) return false;
     const s = this.recipeState(r);
     const cost = this.costOf(r);
     if (s.locked || !this.take(cost)) return false;
     if (r.build === '__dome') { this.state.domeKit = cost; this.qa.event('craft', { id }); this.qa.event('dome_craft'); this.builder.start('__dome'); return true; }
-    if (r.build) { this.startPlacing(r, cost); this.qa.event('craft', { id }); return true; }
+    if (r.build) { this.startPlacing(r, cost, opt.model); this.qa.event('craft', { id }); return true; }
     if (r.upgrade) { (this.state.upg ||= {})[r.upgrade] = 1; this.applyUpgrades(); this.save(); this.ui.toast(`Улучшено: ${r.name}`); this.qa.event('craft', { id }); return true; }
     const job = { id, end: this.time + (instant ? 0 : r.time), time: r.time };
     this.state.craftQueue.push(job);
@@ -476,11 +476,11 @@ export class Game {
     if (await this.rewarded('instant_craft')) { job.end = this.time; return true; }
     return false;
   }
-  startPlacing(r, cost) {
-    const ghost = this.models.instance(r.build);
+  startPlacing(r, cost, model) {
+    const ghost = this.models.instance(model || r.build);
     ghost.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.55; c.castShadow = false; } });
     this.scene.add(ghost);
-    this.placing = { r, ghost, cost: cost || r.cost };
+    this.placing = { r, ghost, cost: cost || r.cost, model: model || r.build };
   }
   placeOk() {
     if (!this.placing) return false;
@@ -499,7 +499,7 @@ export class Game {
     if (this.placing?.builder) return this.builder.confirm();
     if (!this.placing || !this.placeOk()) return false;
     const { r, ghost } = this.placing;
-    const b = { model: r.build, recipe: r.id, x: ghost.position.x, z: ghost.position.z, y: +ghost.position.y.toFixed(2), rot: ghost.rotation.y, gives: r.gives };
+    const b = { model: this.placing.model || r.build, recipe: r.id, x: ghost.position.x, z: ghost.position.z, y: +ghost.position.y.toFixed(2), rot: ghost.rotation.y, gives: r.gives };
     this.scene.remove(ghost);
     this.placing = null;
     this.state.buildings.push(b);
@@ -510,6 +510,24 @@ export class Game {
     this.stats.built++;
     this.save();
     return true;
+  }
+  // Скины марсохода, доступные игроку: стандарт + модели из купленных наборов (тема с rover_model)
+  roverSkins() {
+    const T = this.cfg.monetization?.themes || {}, out = [{ id: 'rover', name: 'Стандарт' }];
+    for (const [k, t] of Object.entries(T)) if (t.rover_model && this.shop?.hasTheme(k) && this.models.protos[t.rover_model]) out.push({ id: t.rover_model, name: t.rover_name || t.name });
+    return out;
+  }
+  // Поставить марсоход перед игроком (покупка набора): ближайшее подходящее место на 5–8 м вокруг
+  spawnVehicleNear(recipe, model) {
+    const P = this.player, f = P.forward(), base = Math.atan2(f.x, f.z);
+    for (const d of [5.5, 7, 8.5]) for (const da of [0, 0.5, -0.5, 1, -1, 1.6, -1.6, 2.4, -2.4, Math.PI]) {
+      const a = base + da, x = P.pos.x + Math.sin(a) * d, z = P.pos.z + Math.cos(a) * d, y = this.groundY(x, z);
+      if (this.builder.modOfPos(x, z) || this.builder.domeAt(x, z, 1.5) || this.world.slopeAt(x, z) > 0.4 || y < this.world.waterAt(x, z) || this.world.blocked?.(x, z)) continue;
+      if (this.state.buildings.some(b => Math.hypot(b.x - x, b.z - z) < 3)) continue;
+      const b = { model, recipe, x: +x.toFixed(2), z: +z.toFixed(2), y: +y.toFixed(2), rot: Math.atan2(P.pos.x - x, P.pos.z - z) + Math.PI / 2 };
+      this.state.buildings.push(b); this.spawnBuilding(b, true); this.save(); return b;
+    }
+    return null;
   }
   cancelPlace() {
     if (this.placing?.builder) return this.builder.cancel();
@@ -549,9 +567,10 @@ export class Game {
     if (g.boost_ti_sec) this.state.boosts.ti = Math.max(Date.now(), this.state.boosts.ti || 0) + g.boost_ti_sec * 1000;
     if (p.once) this.state.flags['bought_' + id] = true;
     this.shop?.grant(p);   // + реклама отключается за любую покупку
+    if (p.grant?.rover) this.ui.close?.();   // марсоход — сразу показать мир, он стоит перед игроком
+    this.ui.celebrate?.(p.title);   // конфетти, вспышка, радость астронавта
     if (g.flags?.includes('suit_gold')) this.applySuit();
     this.save();
-    this.ui.toast('Покупка: ' + p.title, 'rar-legend');
     return true;
   }
   applySuit() {

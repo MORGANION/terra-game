@@ -2040,7 +2040,9 @@
           "bps": [
             "rover"
           ],
-          "theme": "ice"
+          "theme": "ice",
+          "skin": "skin_ice",
+          "rover": "rover_ice"
         }
       },
       {
@@ -2257,7 +2259,8 @@
         "trim": "#35b6ff",
         "stripe": "#1f78c8",
         "roof": "#3a95e0",
-        "glow": "#7fe8ff"
+        "glow": "#7fe8ff",
+        "rover_name": "Айсберг"
       },
       "lava": {
         "name": "Лава",
