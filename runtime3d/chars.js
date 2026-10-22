@@ -98,6 +98,23 @@ function glassVisor(o, V) {
   m.customProgramCacheKey = () => 'visor';
 }
 
+// Отдельные куски меша (связные компоненты, сварка по позиции) целиком → одна кость: ранец модели не гнётся и не тянется к рукам/ногам.
+// detach: { bone: 'Spine2', zMax: 0.45 } — компоненты, у которых ВСЕ вершины лежат в задней доле bbox по z (< zMax).
+function detachParts(model, R) {
+  model.traverse(o => {
+    if (!o.isSkinnedMesh || o.name === 'outline' || o.userData.detached) return; o.userData.detached = true;
+    const g = o.geometry, P = g.attributes.position, SI = g.attributes.skinIndex, SW = g.attributes.skinWeight, I = g.index.array, n = P.count;
+    const bi = o.skeleton.bones.findIndex(b => b.name.replace(/^mixamorig:?/, '') === R.bone); if (bi < 0) return;
+    const par = new Int32Array(n).map((_, i) => i), f = x => { while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; } return x; }, u = (a, b) => { a = f(a); b = f(b); if (a !== b) par[a] = b; };
+    const key = new Map(); for (let v = 0; v < n; v++) { const k = P.getX(v).toFixed(4) + ',' + P.getY(v).toFixed(4) + ',' + P.getZ(v).toFixed(4); key.has(k) ? u(v, key.get(k)) : key.set(k, v); }
+    for (let t = 0; t < I.length; t += 3) { u(I[t], I[t + 1]); u(I[t], I[t + 2]); }
+    g.computeBoundingBox(); const bb = g.boundingBox, D = bb.max.z - bb.min.z, zLim = bb.min.z + (R.zMax ?? 0.45) * D;
+    const zmax = new Map(); for (let v = 0; v < n; v++) { const r = f(v); zmax.set(r, Math.max(zmax.get(r) ?? -1e9, P.getZ(v))); }
+    let c = 0; for (let v = 0; v < n; v++) if (zmax.get(f(v)) < zLim) { SI.setXYZW(v, bi, 0, 0, 0); SW.setXYZW(v, 1, 0, 0, 0); c++; }
+    SI.needsUpdate = SW.needsUpdate = true; o.userData.detachCount = c;
+  });
+}
+
 // Экземпляр персонажа: { root, play(name), update(dt) }. height — рост в метрах.
 export function makeCharacter(gltf, opts = {}) {
   const { height = 1.6, outline = 0.012, toon = true } = opts;   // + visor: {y} — стеклянный визор шейдером
@@ -112,6 +129,7 @@ export function makeCharacter(gltf, opts = {}) {
   const s = height / h; model.scale.setScalar(s); model.position.y = -box.min.y * s;
   const outlines = [];
   if (opts.rigid) rigidify(model, opts.rigid);
+  if (opts.detach) detachParts(model, opts.detach);
   model.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = opts.shadow !== false; o.receiveShadow = false; o.frustumCulled = false;
