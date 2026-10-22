@@ -360,6 +360,7 @@ export class UI {
       } else {
         b.innerHTML = r.build ? this.T.build : r.upgrade ? 'Улучшить' : 'Создать';
         b.disabled = s.locked || !s.affordable || (!r.build && !near);
+        if (!s.locked && s.affordable && !r.build && !near) { b.innerHTML = `${ic('pin')} К фабрикатору`; b.title = 'Подойди к фабрикатору в куполе'; row.classList.add('needbench'); }
         if (r.build === '__dome') b.innerHTML = 'Собрать';
         b.onpointerdown = async e => { e.stopPropagation(); if (b.disabled) return;
           const skins = r.vehicle ? g.roverSkins() : [];
