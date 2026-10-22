@@ -134,6 +134,16 @@ export class UI {
     else { n.innerHTML = `${ic('star')} <b>Задание:</b> «${t.name}» — в меню «${t.panel === 'craft' ? 'Крафт' : 'Стройка'}» ${kbd(t.panel === 'craft' ? 'C' : 'B')}`; n.append(this.sbtn('goal_go', 'Открыть', 'ok', () => this.open(t.panel))); }
     body.prepend(n);
   }
+  // Стрелка к боковой кнопке (Крафт/Стройка), где делается текущая цель; прячется, когда панель открыта
+  goalArrow() {
+    const t = this.goalTarget(), show = t && !this.panel && !this.g.placing && !this.g.dead && this.g.state.baseDome !== undefined;
+    let a = this._garrow; if (!a) { a = this._garrow = document.createElement('div'); a.className = 'garrow'; a.innerHTML = '<b></b><i></i>'; document.body.append(a); }
+    const B = show && this.buttons[t.panel]; if (!B || B.offsetParent === null) { a.style.display = 'none'; return; }
+    const r = B.getBoundingClientRect(), left = r.left > innerWidth / 2;   // кнопки справа (ПК) или слева (телефон)
+    a.classList.toggle('fromleft', left); a.style.display = 'flex'; a.querySelector('b').textContent = t.panel === 'craft' ? 'Крафт' : 'Стройка';
+    a.style.top = (r.top + r.height / 2) + 'px'; a.style.left = left ? '' : (r.right + 8) + 'px'; a.style.right = left ? (innerWidth - r.left + 8) + 'px' : '';
+    B.classList.add('goalbtn'); for (const k of ['craft', 'house']) if (k !== t.panel) this.buttons[k]?.classList.remove('goalbtn');
+  }
   scrollToGoal() { const r = this.el('pbody').querySelector('.goalrow'); if (r) r.scrollIntoView({ block: 'center' }); }
 
   // ---------- HUD каждый кадр ----------
@@ -261,6 +271,7 @@ export class UI {
     this.buttons.life.style.display = lifeOn ? '' : 'none';
     // Живое обновление панели без сброса прокрутки и без пересборки, если ничего не поменялось
     this.tick = (this.tick || 0) + 1;
+    if (this.tick % 10 === 0) this.goalArrow();
     if (this.panel === 'craft' && this.tick % 15 === 0) this.keepScroll(() => this.renderCraft());
     if (this.panel === 'life' && this.tick % 20 === 0) this.keepScroll(() => this.renderLife());
     if (this.panel === 'inv' && this.tick % 20 === 0) this.keepScroll(() => this.renderInv());
@@ -426,7 +437,7 @@ export class UI {
     // Слоты: каждая стопка — клетка; расходники — по тапу
     const grid = body.querySelector('#slotgrid');
     const cells = [];
-    for (const [k, n] of Object.entries(g.state.inv)) for (let left = n; left > 0; left -= stack) cells.push([k, Math.min(stack, left)]);
+    for (const [k, n] of Object.entries(g.state.inv)) if (!g.pocket(k)) for (let left = n; left > 0; left -= stack) cells.push([k, Math.min(stack, left)]);
     cells.forEach(([k, n], i) => {
       const it = g.cfg.items[k] || { name: k }, b = document.createElement('button');
       b.className = `slot ${it.rarity && it.rarity !== 'common' ? 'rar-' + it.rarity : ''} ${it.use ? 'use' : ''}`; b.title = it.name;
@@ -438,7 +449,12 @@ export class UI {
     });
     for (let i = cells.length; i < max; i++) grid.insertAdjacentHTML('beforeend', '<div class="slot empty"></div>');
     const G = g.cfg.gear.backpack, top = G.tiers[G.tiers.length - 1].v;
-    for (let i = max; i < top; i++) grid.insertAdjacentHTML('beforeend', `<div class="slot lockd">${ic('lock')}</div>`);
+    // Карман (баллоны, аптечки из наград): в заблокированных клетках, не тратят слоты
+    const pk = Object.entries(g.state.inv).filter(([k, n]) => g.pocket(k) && n > 0); let li = max;
+    for (const [k, n] of pk) { const it = g.cfg.items[k], b = document.createElement('button'); b.className = 'slot lockd pocket use'; b.id = 'b_use_' + k; b.title = it.name + ' — в кармане, не занимает рюкзак';
+      b.innerHTML = `${itemIcon(k, it)}<b>${n}</b><span>${it.name}</span><small>${Object.entries(it.use).map(([a, v]) => `+${v} ${a === 'o2' ? 'O₂' : 'HP'}`).join(' ')}</small>`;
+      b.onpointerdown = e => { e.stopPropagation(); g.use(k); this.renderInv(); }; grid.append(b); li++; }
+    for (let i = li; i < Math.max(top, li); i++) grid.insertAdjacentHTML('beforeend', `<div class="slot lockd">${ic('lock')}</div>`);
   }
   // Вскрытие лута: предметы появляются по одному, по возрастанию редкости; эпик/легендарка — со вспышкой
   lootPanel(title, items, X) {
@@ -569,6 +585,7 @@ export class UI {
     row('Чертёж: Марсоход', () => { g.state.bps.rover = 1; g.save(); }, g.state.bps?.rover ? 'уже изучен — Крафт (C) → Марсоход' : 'рецепт появится в Крафте');
     row('Ресурсы на марсоход', () => { g.give?.({}) ; for (const [k, v] of Object.entries({ iron: 20, silicon: 8, titanium: 4, cobalt: 4 })) g.state.inv[k] = (g.state.inv[k] || 0) + v; }, '20 железа, 8 кремния, 4 титана, 4 кобальта');
     row('Поставить марсоход рядом', () => { const r = g.cfg.recipes.find(x => x.id === 'rover'), p = g.player.pos, f = g.player.forward(); const b = { model: 'rover', recipe: 'rover', x: +(p.x + f.x * 4).toFixed(2), z: +(p.z + f.z * 4).toFixed(2), rot: g.player.obj.rotation.y }; g.state.buildings.push(b); g.spawnBuilding(b, true); g.save(); }, 'без ресурсов, сразу перед героем');
+    row('Чертёж: Марсоход II', () => { g.state.bps.rover = 1; g.state.bps.rover2 = 1; for (const [k, v] of Object.entries({ magnetite: 6, titanium: 4, cobalt: 3 })) g.state.inv[k] = (g.state.inv[k] || 0) + v; g.save(); this.toast('Чертёж «Марсоход II» + ресурсы на апгрейд: Крафт → Улучшения техники'); }, g.state.upg?.rover2 ? 'уже улучшено' : 'в игре — гарантированно в обломках «Ковчега» (корабль колонистов); апгрейд: мотор ×1.45, скорость ×1.25, склон +6°');
     row('Скафандр «Иней» (ледяной набор)', async () => { (g.state.skins ??= {}).skin_ice = true; await g.skins.wear('skin_ice'); g.player.devJet = true; this.close?.(); }, 'надеть новый скафандр + джетпак без ограничений (Пробел в воздухе)');
     row('Ледяной набор: марсоход «Айсберг»', () => { g.state.flags.theme_ice = true; g.state.bps.rover = 1; g.spawnVehicleNear('rover', 'rover_ice'); this.close?.(); }, 'ставит «Айсберг» перед тобой — садись на E; при крафте марсохода теперь будет выбор скина');
     row('Джетпак 1 уровня', () => { const st = g.state; st.bps.jet = Math.max(st.bps.jet || 0, 1); st.gear.jet = Math.max(st.gear.jet || 0, 1); g.explore.applyGear(); g.player.jetFuel = g.player.jetFuelMax; g.save(); }, (g.state.gear?.jet || 0) >= 1 ? 'уже есть — двойной прыжок (Пробел в воздухе)' : 'чертёж + сразу надет, без ресурсов');
@@ -613,9 +630,20 @@ export class UI {
     const sh = this.g.shop; if (!sh) return ''; const M = sh.M, S = this.g.state;
     const th = Object.keys(M.themes || {}).filter(k => sh.hasTheme(k)), st = Object.keys(M.styles || {}).filter(k => sh.hasStyle(k));
     let h = '';
-    if (th.length > 1) h += `<div class="note sec"><span class="secno">${ic('suit')}</span>Тема снаряжения</div><div class="dbtns">` + th.map(k => `<button class="btn ${S.theme === k ? 'ok' : 'sec'}" data-theme="${k}" ${S.theme === k ? 'disabled' : ''}>${M.themes[k].name}${S.theme === k ? ' ✓' : ''}</button>`).join('') + `</div>`;
-    if (st.length > 1) h += `<div class="note sec"><span class="secno">${ic('star')}</span>Стиль планеты</div><div class="dbtns">` + st.map(k => `<button class="btn ${S.style === k ? 'ok' : 'sec'}" data-style="${k}" ${S.style === k ? 'disabled' : ''}>${M.styles[k].name}${S.style === k ? ' ✓' : ''}</button>`).join('') + `</div>`;
+    const lockedSt = Object.keys(M.styles || {}).filter(k => !sh.hasStyle(k)), lockedTh = Object.keys(M.themes || {}).filter(k => !sh.hasTheme(k));
+    h += `<div class="note sec"><span class="secno">${ic('suit')}</span>Тема снаряжения</div><div class="dbtns">` + th.map(k => `<button class="btn ${S.theme === k ? 'ok' : 'sec'}" data-theme="${k}" ${S.theme === k ? 'disabled' : ''}>${M.themes[k].name}${S.theme === k ? ' ✓' : ''}</button>`).join('') + lockedTh.map(k => `<button class="btn sec lockbtn" data-goto="theme:${k}">${M.themes[k].name} 🔒</button>`).join('') + `</div>`;
+    h += `<div class="note sec"><span class="secno">${ic('star')}</span>Стиль планеты</div><div class="dbtns">` + st.map(k => `<button class="btn ${S.style === k ? 'ok' : 'sec'}" data-style="${k}" ${S.style === k ? 'disabled' : ''}>${M.styles[k].name}${S.style === k ? ' ✓' : ''}</button>`).join('') + lockedSt.map(k => `<button class="btn sec lockbtn" data-goto="style:${k}">${M.styles[k].name} 🔒</button>`).join('') + `</div>`;
     return h;
+  }
+  // Где получить закрытую вещь: магазин (набор/стиль) или календарь наград — открыть и подсветить обводкой
+  gotoSource(key) {
+    const [kind, id] = key.split(':'), g = this.g, M = g.cfg.monetization;
+    const iap = M.iap.find(p => kind === 'style' ? p.grant?.style === id : kind === 'theme' ? p.grant?.theme === id : p.grant?.skin === id || (p.grant?.theme && M.themes[p.grant.theme] && g.cfg.skins?.[id] && p.grant.skin === id));
+    const day = kind === 'skin' ? g.cfg.daily_calendar.findIndex(d => d.skin === id) : -1;
+    const glow = el => { if (!el) return; el.scrollIntoView({ block: 'center' }); el.classList.remove('srcglow'); void el.offsetWidth; el.classList.add('srcglow'); setTimeout(() => el.classList.remove('srcglow'), 3200); };
+    if (iap) { this.open('store'); setTimeout(() => glow(this.el('pbody').querySelector(`[data-open="${iap.id}"]`) || this.el('pbody').querySelector(`[data-buy="${iap.id}"]`)?.closest('.sh-card,.row')), 60); return; }
+    if (day >= 0) { this.open('daily'); setTimeout(() => glow(this.el('pbody').querySelector(`.dcell[data-i="${day}"]`)), 60); return; }
+    this.toast('Скоро — следи за обновлениями');
   }
   skinsHtml() {
     const g = this.g; if (!g.skins) return '';
@@ -623,7 +651,7 @@ export class UI {
     const all = ['hero', ...Object.keys(g.cfg.skins || {})];
     return `<div class="note sec"><span class="secno">${ic('suit')}</span>Скафандр</div><div class="dbtns">` + all.map(id => own[id]
       ? `<button class="btn ${id === cur ? 'ok' : 'sec'}" data-skin="${id}" ${id === cur ? 'disabled' : ''}>${names[id] || id}${id === cur ? ' ✓' : ''}</button>`
-      : `<button class="btn sec" disabled>${names[id] || id} 🔒</button>`).join('') + `</div>`;
+      : `<button class="btn sec lockbtn" data-goto="skin:${id}">${names[id] || id} 🔒</button>`).join('') + `</div>`;
   }
   renderSettings() {
     const S = this.settings, body = this.el('pbody');
@@ -649,6 +677,7 @@ export class UI {
     body.querySelector('#b_creative')?.addEventListener('click', e => { e.stopPropagation(); this.g.shop.setCreative(!this.g.creative); this.renderSettings(); });
     body.querySelectorAll('[data-theme]').forEach(b => b.onclick = e => { e.stopPropagation(); this.g.shop.setTheme(b.dataset.theme); this.renderSettings(); });
     body.querySelectorAll('[data-style]').forEach(b => b.onclick = e => { e.stopPropagation(); this.g.shop.setStyle(b.dataset.style); this.renderSettings(); });
+    body.querySelectorAll('[data-goto]').forEach(b => b.onclick = e => { e.stopPropagation(); this.gotoSource(b.dataset.goto); });
     body.querySelector('#b_unstuck').onclick = e => { e.stopPropagation(); const r = this.g.unstuck(); this.close(); this.toast(r === 'rover' ? 'Марсоход вытащен на ровное место' : 'Перенесли на безопасное место'); };
     body.querySelector('#b_restart').onclick = async e => { e.stopPropagation(); this.close();
       const id = await this.dialog(`<h2>Начать заново?</h2><p>Весь прогресс планеты, постройки, снаряжение и Род будут удалены. Это нельзя отменить.</p>`, [['rs_no', 'Отмена', 'sec'], ['rs_yes', 'Удалить и начать', 'bad']]);

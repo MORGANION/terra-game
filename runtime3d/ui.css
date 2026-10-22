@@ -711,4 +711,20 @@ body.suffo .bar.o2,body.suffo .bar.hp{background:rgba(38,21,15,.95)}
 .rpcard b{font-size:15px}
 
 /* пока открыт диалог (выбор, лут, черта) — подсказки не перекрывают его */
-body:has(#dialog[style*="flex"]) .coach{display:none!important}
+body:has(#dialog[style*="flex"]) .coach,body:has(#panel[style*="flex"]) .coach{display:none!important}
+
+/* стрелка к боковой кнопке цели */
+.garrow{position:fixed;z-index:15;display:none;align-items:center;gap:6px;transform:translateY(-50%);pointer-events:none;flex-direction:row-reverse}
+.garrow.fromleft{flex-direction:row}
+.garrow i{width:0;height:0;border-top:13px solid transparent;border-bottom:13px solid transparent;border-right:20px solid #ffcf4a;filter:drop-shadow(0 2px 0 #1c120c);animation:garrowL .8s ease-in-out infinite alternate}
+.garrow.fromleft i{border-right:0;border-left:20px solid #ffcf4a;animation-name:garrowR}
+.garrow b{background:#ffcf4a;color:#1c120c;border:2px solid #1c120c;border-radius:10px;padding:3px 9px;font-size:13px;box-shadow:0 3px 0 #1c120c}
+@keyframes garrowL{to{transform:translateX(-8px)}}
+@keyframes garrowR{to{transform:translateX(8px)}}
+#side .btn.goalbtn{box-shadow:0 0 0 3px #ffcf4a,0 0 18px #ffcf4aaa}
+/* карман в заблокированных клетках */
+.slot.lockd.pocket{border-style:solid;border-color:#5cd6a8;color:inherit;font-size:inherit;cursor:pointer;background:repeating-linear-gradient(-45deg,rgba(92,214,168,.18) 0 6px,transparent 6px 12px)}
+/* подсветка источника закрытой вещи */
+.srcglow{outline:5px solid #fff3b0;outline-offset:4px;border-radius:14px;animation:srcglow .7s ease-in-out 5 alternate;z-index:2;position:relative}
+@keyframes srcglow{from{outline-color:#ffcf4a;box-shadow:0 0 0 0 #ffcf4a00;transform:scale(1)}to{outline-color:#ffffff;box-shadow:0 0 34px 10px #ffcf4aee;transform:scale(1.06)}}
+.lockbtn{opacity:.75}

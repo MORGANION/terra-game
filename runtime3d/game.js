@@ -310,8 +310,11 @@ export class Game {
     return { left, home, breathable: this.ti() >= this.T.breathable_ti };
   }
   slots() { return this.explore ? this.explore.slots() : this.cfg.player.inventory_slots; }
-  usedSlots() { return Object.values(this.state.inv).reduce((s, n) => s + Math.ceil(n / this.cfg.player.stack), 0); }
+  // Карман: расходники с use (баллон O₂, аптечка) лежат в заблокированных клетках рюкзака и не занимают обычные слоты
+  pocket(k) { return !!this.cfg.items[k]?.use; }
+  usedSlots() { return Object.entries(this.state.inv).reduce((s, [k, n]) => s + (this.pocket(k) ? 0 : Math.ceil(n / this.cfg.player.stack)), 0); }
   canAdd(item, n = 1) {
+    if (this.pocket(item)) return true;
     const st = this.cfg.player.stack, have = this.state.inv[item] || 0;
     return this.usedSlots() - Math.ceil(have / st) + Math.ceil((have + n) / st) <= this.slots();
   }
