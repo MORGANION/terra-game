@@ -179,6 +179,7 @@ export class Game {
     this.explore.populate();
     this.blockout.build();
     this.builder.populate();
+    this.relocateNodes();
     this.shop = new Shop(this); this.shop.applyAll();
     for (const p of this.state.house) if (this.builder.P[p.id]?.store) this.storages.push(this.builder.storageOf(p));
   }
@@ -751,4 +752,17 @@ export class Game {
     if (this.saveClock > 5) { this.saveClock = 0; this.save(); }
   }
   spawnMeteor(type) { return this.explore.spawnMeteor(type); }
+  // Ресурс оказался в модуле/куполе/перемычке — переносим точку спавна наружу (рядом, на свободное место)
+  blockedAt(x, z) { const B = this.builder; return !!(B.modOfPos(x, z) || B.domeAt(x, z, 1.2) || B.dockAt(x, z) || this.state.modules.some(m => { const o = B.mobjs.get(B.mkey(m)); return o && Math.hypot(o.position.x - x, o.position.z - z) < 3.4; })); }
+  relocateNodes() {
+    let moved = 0;
+    for (const n of this.nodes) { if (!this.blockedAt(n.x, n.z)) continue;
+      let done = false;
+      for (let r = 6; r <= 16 && !done; r += 2.5) for (let k = 0; k < 12 && !done; k++) { const a = k / 12 * Math.PI * 2 + n.i, x = n.x + Math.cos(a) * r, z = n.z + Math.sin(a) * r;
+        if (this.blockedAt(x, z) || this.world.slopeAt(x, z) > 0.45 || this.world.waterAt(x, z) > this.world.heightAt(x, z) - 0.1) continue;
+        const y = this.world.heightAt(x, z) - 0.05; n.x = x; n.z = z; n.y = y; n.ctl.set(n.i, { x, y, z }); done = true; moved++; }
+      if (!done) { n.ctl.set(n.i, { visible: false }); n.mined = Date.now() + 1e12; } }
+    if (moved) for (const c of Object.values(this.nodeSets)) c.flush();
+    return moved;
+  }
 }

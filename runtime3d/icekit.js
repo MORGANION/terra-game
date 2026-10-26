@@ -159,7 +159,7 @@ function hipGeo(o, TOP, RH, y0) {   // o = [−z, +x, +z, −x] свесы
 // Крыша как на промо набора: пологая голубая четырёхскатная усечённая пирамида со свесом, белый карниз,
 // на площадке белый вентблок с тёмными жалюзи и две тёмные антенны разной высоты со светлыми навершиями. Оранжерея — такая же.
 export function makeRoof(glass = false, antennas = true, seed = 0, open = [false, false, false, false]) {
-  const g = new THREE.Group(), OV = 0.2, RH = 1.3, TOP = 1.4, o = open.map(v => v ? 0 : OV);
+  const g = new THREE.Group(), OV = 0.22, RH = 0.42, TOP = 2.7, o = open.map(v => v ? 0 : OV);
   g.add(box(M + 0.04, 0.16, M + 0.04, mat('hull'), 0, Y1 + 0.08, 0));                                                   // плита перекрытия
   { const w = M + o[1] + o[3], d = M + o[0] + o[2]; g.add(box(w, 0.26, d, mat('#ffffff', { emissive: '#ffffff', emissiveIntensity: 0.15 }), (o[1] - o[3]) / 2, Y1 + 0.2, (o[2] - o[0]) / 2)); g.add(box(w + 0.01, 0.05, d + 0.01, glowMat(C.glow, 2.4), (o[1] - o[3]) / 2, Y1 + 0.05, (o[2] - o[0]) / 2)); }   // белый карниз-свес
   const H = hipGeo(o, TOP, RH, Y1 + 0.3); g.add(mesh(H.g, mat('#82ccff', { emissive: '#3a8fd8', emissiveIntensity: 0.28, roughness: 0.45 })));
@@ -200,38 +200,96 @@ function makeBush(x, y, z, k, seed) {
   if (seed % 3 === 0) g.add(mesh(new THREE.IcosahedronGeometry(0.06, 0), mat('#ff8a5c'), 0, 0.42, 0));
   return g;
 }
-// Обстановка у стены (каноническая рама: внутрь −z)
-function makeProp(type) {
-  const g = new THREE.Group();
-  if (type === 'bunk') { g.add(box(1.9, 0.42, 0.85, mat('blue'), 0, Y0 + 0.26, -0.55)); g.add(box(1.8, 0.14, 0.78, mat('pad', { color: '#f2e9da' }), 0, Y0 + 0.52, -0.55)); g.add(box(0.5, 0.12, 0.6, mat('#9fd0f5'), -0.6, Y0 + 0.64, -0.55)); }
-  if (type === 'desk') { g.add(box(1.6, 0.08, 0.6, mat('hull'), 0, Y0 + 0.78, -0.42)); for (const x of [-0.7, 0.7]) g.add(box(0.08, 0.74, 0.5, mat('blue'), x, Y0 + 0.37, -0.42));
-    const scr = box(0.62, 0.3, 0.04, glowMat('#3fd8ff', 1.1), 0.25, Y0 + 1.0, -0.56); scr.rotation.x = -0.25; g.add(scr); g.add(box(0.06, 0.12, 0.06, mat('dark'), 0.25, Y0 + 0.86, -0.56)); g.add(box(0.4, 0.03, 0.18, mat('dark'), -0.35, Y0 + 0.835, -0.36)); }
-  if (type === 'shelf') { for (const y of [0.5, 1.1, 1.7]) g.add(box(1.5, 0.06, 0.45, mat('hull'), 0, Y0 + y, -0.32)); for (const x of [-0.72, 0.72]) g.add(box(0.06, 1.8, 0.45, mat('blue'), x, Y0 + 0.9, -0.32));
-    for (const [x, y, c] of [[-0.4, 0.66, '#f0a040'], [0.1, 0.66, '#9fd0f5'], [0.4, 1.26, '#f0a040'], [-0.3, 1.26, '#e8e8e8']]) g.add(box(0.36, 0.26, 0.32, mat(c), x, Y0 + y, -0.32)); }
-  if (type === 'plants') { g.add(box(3.0, 0.5, 0.55, mat('blue'), 0, Y0 + 0.25, -0.42)); g.add(box(2.9, 0.05, 0.45, mat('soil'), 0, Y0 + 0.51, -0.42));
-    for (let i = 0; i < 5; i++) g.add(makeBush(-1.2 + i * 0.6, Y0 + 0.52, -0.42, 0.8 + (i % 3) * 0.2, i)); }
+// Обстановка у стены (каноническая рама: стена на z=0, внутрь −z). X0 — сдвиг к одному краю стены:
+// другой край (≈1.4 м) остаётся свободным — место под сундук.
+const X0 = -0.6;
+function makeTree(x, z, k, seed) {
+  const g = new THREE.Group(); g.position.set(x, Y0, z); g.scale.setScalar(k);
+  g.add(mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.42, 8), mat('blue'), 0, 0.21, 0)); g.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.03, 8), mat('soil'), 0, 0.42, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.035, 0.05, 0.6, 5), mat('#8a5a3a'), 0, 0.7, 0));
+  for (let i = 0; i < 3; i++) { const c = mesh(new THREE.IcosahedronGeometry(0.28 - i * 0.05, 0), mat(i % 2 ? 'leaf' : 'leaf2'), Math.sin(i * 2.1 + seed) * 0.08, 1.05 + i * 0.2, Math.cos(i * 2.1 + seed) * 0.08); g.add(c); }
+  if (seed % 2) for (let i = 0; i < 4; i++) g.add(mesh(new THREE.IcosahedronGeometry(0.045, 0), mat('#ff8a5c'), Math.cos(i * 1.6) * 0.24, 1.0 + (i % 2) * 0.25, Math.sin(i * 1.6) * 0.24));
   return g;
 }
-
+function makeProp(type) {
+  const g = new THREE.Group(), x = X0;
+  if (type === 'bunk') { g.add(box(1.9, 0.42, 0.85, mat('blue'), x, Y0 + 0.26, -0.55)); g.add(box(1.8, 0.14, 0.78, mat('pad', { color: '#f2e9da' }), x, Y0 + 0.52, -0.55)); g.add(box(0.5, 0.12, 0.6, mat('#9fd0f5'), x - 0.6, Y0 + 0.64, -0.55)); g.add(box(0.9, 0.04, 0.8, mat('#4a8fd8'), x + 0.35, Y0 + 0.6, -0.55)); }
+  if (type === 'bunk2') { for (const y of [0.3, 1.3]) { g.add(box(1.9, 0.12, 0.85, mat('blue'), x, Y0 + y, -0.55)); g.add(box(1.8, 0.12, 0.78, mat('pad', { color: '#f2e9da' }), x, Y0 + y + 0.12, -0.55)); g.add(box(0.45, 0.1, 0.6, mat('#9fd0f5'), x - 0.62, Y0 + y + 0.23, -0.55)); }
+    for (const [a, b] of [[-0.93, -0.12], [0.93, -0.12], [-0.93, -0.97], [0.93, -0.97]]) g.add(box(0.07, 1.75, 0.07, mat('hull'), x + a, Y0 + 0.87, b));
+    for (let k = 0; k < 4; k++) g.add(box(0.05, 0.05, 0.4, mat('metal'), x + 0.96, Y0 + 0.45 + k * 0.28, -0.75)); }
+  if (type === 'desk') { g.add(box(1.6, 0.08, 0.6, mat('hull'), x, Y0 + 0.78, -0.42)); for (const d of [-0.7, 0.7]) g.add(box(0.08, 0.74, 0.5, mat('blue'), x + d, Y0 + 0.37, -0.42));
+    const scr = box(0.62, 0.3, 0.04, glowMat('#3fd8ff', 1.1), x + 0.25, Y0 + 1.0, -0.56); scr.rotation.x = -0.25; g.add(scr); g.add(box(0.06, 0.12, 0.06, mat('dark'), x + 0.25, Y0 + 0.86, -0.56)); g.add(box(0.4, 0.03, 0.18, mat('dark'), x - 0.35, Y0 + 0.835, -0.36));
+    g.add(box(0.5, 0.08, 0.5, mat('blue'), x, Y0 + 0.45, -1.05)); g.add(box(0.5, 0.5, 0.08, mat('blue'), x, Y0 + 0.75, -1.28)); g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.42, 5), mat('metal'), x, Y0 + 0.21, -1.05)); }
+  if (type === 'locker') { g.add(box(1.0, 2.05, 0.55, mat('hull'), x, Y0 + 1.03, -0.3)); for (const d of [-0.25, 0.25]) { g.add(box(0.46, 1.9, 0.03, mat('#cfe2f2'), x + d, Y0 + 1.03, -0.59)); g.add(box(0.04, 0.3, 0.04, glowMat(), x + d * 0.3, Y0 + 1.1, -0.61)); } }
+  if (type === 'kitchen') { g.add(box(2.1, 0.9, 0.62, mat('hull'), x, Y0 + 0.45, -0.33)); g.add(box(2.14, 0.06, 0.66, mat('blue'), x, Y0 + 0.93, -0.33));
+    g.add(box(0.5, 0.02, 0.4, mat('dark'), x - 0.5, Y0 + 0.97, -0.33)); for (const d of [0.35, 0.65]) g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 10), mat('#ff7a4a', { emissive: '#ff5a2a', emissiveIntensity: 0.6 }), x + d, Y0 + 0.97, -0.33));
+    g.add(box(2.1, 0.6, 0.38, mat('#e8f0f8'), x, Y0 + 1.9, -0.2)); g.add(box(1.9, 0.04, 0.02, glowMat(), x, Y0 + 1.58, -0.4)); }
+  if (type === 'table') { g.add(mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 12), mat('hull'), x, Y0 + 0.74, -1.0)); g.add(mesh(new THREE.CylinderGeometry(0.06, 0.18, 0.72, 8), mat('blue'), x, Y0 + 0.36, -1.0));
+    for (const d of [-0.75, 0.75]) { g.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.08, 10), mat('#4a8fd8'), x + d, Y0 + 0.46, -1.0)); g.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.44, 5), mat('metal'), x + d, Y0 + 0.22, -1.0)); }
+    g.add(mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.12, 8), mat('#ffffff'), x + 0.15, Y0 + 0.83, -0.95)); }
+  if (type === 'console') { g.add(box(2.0, 0.85, 0.7, mat('#dfe8f1'), x, Y0 + 0.43, -0.38)); g.add(box(2.0, 0.06, 0.74, mat('blue'), x, Y0 + 0.88, -0.38));
+    for (const d of [-0.65, 0, 0.65]) { const sc = box(0.55, 0.38, 0.04, glowMat(d ? '#3fd8ff' : '#7dffb0', 1.0), x + d, Y0 + 1.25, -0.12); sc.rotation.x = -0.15; g.add(sc); g.add(box(0.6, 0.43, 0.03, mat('dark'), x + d, Y0 + 1.25, -0.09)); }
+    for (let k = 0; k < 6; k++) g.add(box(0.08, 0.03, 0.08, glowMat(k % 2 ? '#ffcf4a' : '#40f0ff', 1.4), x - 0.8 + k * 0.32, Y0 + 0.92, -0.62)); }
+  if (type === 'sofa') { g.add(box(1.9, 0.4, 0.8, mat('#4a8fd8'), x, Y0 + 0.2, -0.45)); g.add(box(1.9, 0.55, 0.22, mat('#4a8fd8'), x, Y0 + 0.55, -0.15)); for (const d of [-0.95, 0.95]) g.add(box(0.2, 0.55, 0.8, mat('blue'), x + d, Y0 + 0.3, -0.45));
+    for (const d of [-0.45, 0.45]) g.add(box(0.8, 0.14, 0.62, mat('#f2e9da'), x + d, Y0 + 0.46, -0.5)); g.add(box(0.35, 0.3, 0.12, mat('#ffcf4a'), x - 0.6, Y0 + 0.65, -0.3)); }
+  if (type === 'shelf') { for (const y of [0.5, 1.1, 1.7]) g.add(box(1.5, 0.06, 0.45, mat('hull'), x, Y0 + y, -0.32)); for (const d of [-0.72, 0.72]) g.add(box(0.06, 1.8, 0.45, mat('blue'), x + d, Y0 + 0.9, -0.32));
+    for (const [a, y, c] of [[-0.4, 0.66, '#f0a040'], [0.1, 0.66, '#9fd0f5'], [0.4, 1.26, '#f0a040'], [-0.3, 1.26, '#e8e8e8'], [0.2, 1.86, '#7dffb0']]) g.add(box(0.36, 0.26, 0.32, mat(c), x + a, Y0 + y, -0.32)); }
+  // --- оранжерея ---
+  if (type === 'plants') { g.add(box(2.4, 0.5, 0.55, mat('blue'), x, Y0 + 0.25, -0.42)); g.add(box(2.3, 0.05, 0.45, mat('soil'), x, Y0 + 0.51, -0.42));
+    for (let i = 0; i < 4; i++) g.add(makeBush(x - 0.9 + i * 0.6, Y0 + 0.52, -0.42, 0.8 + (i % 3) * 0.2, i)); }
+  if (type === 'hydro') { for (const d of [-0.9, 0.9]) g.add(box(0.06, 1.9, 0.5, mat('hull'), x + d, Y0 + 0.95, -0.3));
+    for (const [k, y] of [0.3, 0.95, 1.6].entries()) { g.add(box(1.8, 0.08, 0.5, mat('#dfe8f1'), x, Y0 + y, -0.3)); g.add(box(1.7, 0.03, 0.4, glowMat('#ff5cd8', 1.6), x, Y0 + y + 0.5, -0.3));
+      for (let i = 0; i < 4; i++) g.add(makeBush(x - 0.65 + i * 0.43, Y0 + y + 0.05, -0.3, 0.55 + ((i + k) % 2) * 0.15, i + k)); } }
+  if (type === 'trees') { g.add(makeTree(x - 0.6, -0.5, 1.0, 1)); g.add(makeTree(x + 0.4, -0.5, 0.85, 2));
+    g.add(box(1.1, 0.08, 0.4, mat('#c89a6a'), x - 0.1, Y0 + 0.42, -1.25)); for (const d of [-0.45, 0.45]) g.add(box(0.08, 0.4, 0.36, mat('blue'), x - 0.1 + d, Y0 + 0.2, -1.25)); }
+  if (type === 'flowers') { for (const d of [-0.55, 0.55]) { g.add(box(0.95, 0.42, 0.7, mat('blue'), x + d, Y0 + 0.21, -0.45)); g.add(box(0.88, 0.04, 0.62, mat('soil'), x + d, Y0 + 0.43, -0.45));
+      for (let i = 0; i < 3; i++) { const b = makeBush(x + d - 0.28 + i * 0.28, Y0 + 0.44, -0.45, 0.6, i * 3); b.add(mesh(new THREE.IcosahedronGeometry(0.07, 0), mat(['#ff8ac8', '#ffcf4a', '#ff7a4a'][i]), 0, 0.42, 0)); g.add(b); } }
+    g.add(mesh(new THREE.CylinderGeometry(0.28, 0.28, 1.1, 10), mat('#cfeeff', { transparent: true, opacity: 0.55 }), x + 1.35, Y0 + 0.55, -0.4)); g.add(mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.08, 10), mat('blue'), x + 1.35, Y0 + 1.12, -0.4)); }
+  if (type === 'lamp') { g.add(mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.06, 8), mat('blue'), x, Y0 + 0.03, -0.4)); g.add(mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 5), mat('metal'), x, Y0 + 0.73, -0.4)); g.add(mesh(new THREE.ConeGeometry(0.25, 0.25, 10, 1, true), mat('#ffffff', { emissive: '#fff0d0', emissiveIntensity: 1.2, side: THREE.DoubleSide }), x, Y0 + 1.5, -0.4)); }
+  return g;
+}
+// 4 варианта жилого и 4 стеклянного: окна по сторонам (не везде) и обстановка.
+// Предметы: [тип, высокий?] — высокие ставим к глухим стенам.
+const LAYOUT = {
+  m_room: [
+    { walls: ['window', 'plain', 'port', 'plain'], props: [['bunk'], ['desk'], ['shelf', 1]] },
+    { walls: ['plain', 'port', 'window', 'plain'], props: [['bunk2', 1], ['kitchen'], ['table']] },
+    { walls: ['port', 'window', 'plain', 'plain'], props: [['sofa'], ['locker', 1], ['lamp']] },
+    { walls: ['plain', 'plain', 'window', 'port'], props: [['console'], ['bunk'], ['shelf', 1]] },
+  ],
+  m_glass: [
+    { walls: ['big', 'big', 'big', 'plain'], props: [['plants'], ['plants'], ['hydro', 1]] },
+    { walls: ['big', 'plain', 'big', 'plain'], props: [['trees'], ['hydro', 1], ['flowers']] },
+    { walls: ['plain', 'big', 'big', 'big'], props: [['flowers'], ['plants'], ['trees']] },
+    { walls: ['big', 'big', 'plain', 'big'], props: [['hydro', 1], ['trees'], ['plants']] },
+  ],
+};
 // ---------- Модуль 4×4 из деталей ----------
 // sides: ['wall'|'door'|'dock'|'open'] × 4 (0:−z, 1:+x, 2:+z, 3:−x), как в build.js
 const SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-export function makeIceModule(id, sides, footY) {
-  const g = new THREE.Group(), green = id === 'm_glass';
-  g.userData.kit = 'ice';
+export function makeIceModule(id, sides, footY, variant = 0) {
+  const g = new THREE.Group(), green = id === 'm_glass', L = (LAYOUT[id] || LAYOUT.m_room)[variant % 4];
+  g.userData.kit = 'ice'; g.userData.variant = variant % 4;
   g.add(makeFloor());
   const fd = Math.max(0.3, footY);
   for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = makeLeg(fd); l.position.set(a * 1.45, -0.35, b * 1.45); g.add(l); }
   for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const p = makePost(); p.position.set(a * M / 2, 0, b * M / 2); p.rotation.y = Math.atan2(a, b); g.add(p); }
-  const roof = makeRoof(false, true, (id === 'm_glass' ? 2 : 0) + (sides.filter(k => k === 'open').length), sides.map(k => k === 'open')); roof.name = 'roof'; g.add(roof);
-  const props = { window: ['bunk', 'desk'], port: ['desk', 'bunk'] };
+  const roof = makeRoof(false, true, variant + (green ? 2 : 0), sides.map(k => k === 'open')); roof.name = 'roof'; g.add(roof);
+  // какие стены — под мебель: высокие предметы к глухим, остальные к любым
+  const wallSides = sides.map((k, s) => k === 'wall' ? s : -1).filter(s => s >= 0), used = new Set(), placeOn = {};
+  for (const [type, tall] of L.props) {
+    const pref = wallSides.filter(s => !used.has(s)).sort((a, b) => (tall ? (L.walls[a] === 'plain' ? 0 : 1) - (L.walls[b] === 'plain' ? 0 : 1) : 0));
+    const s = pref[0]; if (s == null) break; used.add(s); placeOn[s] = type;
+  }
+  const solids = [];
   sides.forEach((k, s) => {
     if (k === 'open') return;
     const [a, b] = SIDES[s], f = new THREE.Group(); f.position.set(a * M / 2, 0, b * M / 2); f.rotation.y = s % 2 ? Math.PI / 2 : 0; f.name = 'side' + s; g.add(f);
     const sg = s === 0 || s === 3 ? -1 : 1, w = new THREE.Group(); if (sg < 0) w.rotation.y = Math.PI; f.add(w);   // каноника: наружу +z
-    const kind = k === 'wall' ? (green ? 'big' : s % 2 ? 'port' : 'window') : k;
+    let kind = k === 'wall' ? L.walls[s] : k;
+    if (k === 'wall' && kind === 'plain' && !green && placeOn[s] && ['bunk', 'desk', 'sofa', 'console'].includes(placeOn[s]) && L.walls.filter(q => q !== 'plain').length < 2) kind = 'port';
     w.add(makeWall(kind, green ? 'green' : 'pad'));
-    if (k === 'wall') w.add(makeProp(green ? 'plants' : props[kind][s >> 1]));
+    if (k === 'wall' && placeOn[s]) { const pr = makeProp(placeOn[s]); pr.name = 'prop'; w.add(pr); }
     if (k === 'dock') { g.add(box(Math.abs(a) ? 1.7 : DOOR_W + 0.3, 0.14, Math.abs(b) ? 1.7 : DOOR_W + 0.3, gridMat(), a * 2.75, 0.2, b * 2.75));
       const t = new THREE.Group(); t.position.set(a * M / 2, 0, b * M / 2); t.rotation.y = Math.atan2(a, b); g.add(t);   // рукав: вдоль своей +z, от стены модуля к куполу
       const LEN = 1.3;   // стена модуля → поверхность купола (0.7) + заход под стекло
@@ -240,6 +298,10 @@ export function makeIceModule(id, sides, footY) {
       t.add(box(DOOR_W + ARCH_O + 0.5, 1.6, LEN - 0.3, mat('navy'), 0, Y0 - 0.8, 0.03 + (LEN - 0.3) / 2));   // юбка под рукавом до грунта
       for (const zz of [0.1, 0.62]) t.add(mesh(extrude(archFrame(DOOR_W + ARCH_O + 0.22, DOOR_W + ARCH_O + 0.34, ARCH_Y, ARCH_Y), 0.08), glowMat(), 0, 0, zz)); }
   });
+  // хитбоксы мебели (в осях модуля, XZ): по bbox каждого предмета
+  g.updateMatrixWorld(true);
+  g.traverse(o => { if (o.name !== 'prop') return; const bb = new THREE.Box3().setFromObject(o); if (bb.isEmpty()) return; solids.push([bb.min.x, bb.min.z, bb.max.x, bb.max.z, bb.max.y]); });
+  g.userData.solids = solids;
   return g;
 }
 
@@ -248,7 +310,7 @@ export function makeIceDome(r, doorA, docks = [], H = 0.62) {
   const g = new THREE.Group(); g.userData.kit = 'ice';
   { const fl = mesh(new THREE.CylinderGeometry(r - 0.05, r - 0.05, 0.2, 40), [mat('navy'), gridMat(), mat('navy')], 0, 0.1, 0); fl.receiveShadow = true; fl.material[1] = (cache.gridDome ??= (() => { const m = gridMat().clone(); m.map = gridTex().clone(); m.map.repeat.set(r / 2, r / 2); m.map.needsUpdate = true; return m; })()); g.add(fl); }
   const gap = (DOOR_W / 2 + 0.1) / r, TAU = Math.PI * 2, th = a => ((Math.PI / 2 - a) % TAU + TAU) % TAU;
-  const cuts = docks.map(th).sort((a, b) => a - b), arcs = [];
+  const cuts = [...docks, doorA].map(th).sort((a, b) => a - b), arcs = [];
   if (!cuts.length) arcs.push([0, TAU]); else cuts.forEach((c, i) => { const n = i + 1 < cuts.length ? cuts[i + 1] : cuts[0] + TAU; if (n - c > 2 * gap) arcs.push([c + gap, n - c - 2 * gap]); });
   for (const [t0, tl] of arcs) {
     const seg = Math.max(3, Math.round(24 * tl / TAU));
@@ -271,13 +333,14 @@ export function makeIceDome(r, doorA, docks = [], H = 0.62) {
   shell.add(box(0.6, 0.35, 0.5, mat('hull'), 0, capY + 0.35, 0)); shell.add(box(0.3, 0.14, 0.02, glowMat('#3fd8ff', 1.2), 0, capY + 0.37, 0.26));
   shell.add(mesh(new THREE.CylinderGeometry(0.03, 0.045, 1.6, 5), mat('dark'), 0.15, capY + 1.25, -0.1)); shell.add(mesh(new THREE.SphereGeometry(0.08, 6, 4), glowMat(), 0.15, capY + 2.07, -0.1));
   const lamp = new THREE.PointLight('#e8f8ff', 6, r * 2.2, 1.5); lamp.position.y = r * H; g.add(lamp);
-  // шлюз
-  const door = new THREE.Group(); door.name = 'dome_door'; door.position.set(Math.cos(doorA) * (r + 0.1), 0, Math.sin(doorA) * (r + 0.1)); door.rotation.y = -doorA + Math.PI / 2; door.scale.setScalar(0.82); g.add(door);
-  door.add(box(2.6, 2.9, 1.2, mat('hull'), 0, 1.45, 0.2)); door.add(box(2.66, 0.2, 1.24, mat('blue'), 0, 2.9, 0.2)); door.add(box(2.66, 0.08, 1.26, glowMat(), 0, 2.74, 0.2));
-  door.add(box(2.66, 0.36, 1.24, mat('navy'), 0, 0.18, 0.2));
-  door.add(box(1.9, 2.3, 1.26, mat('dark'), 0, 1.25, 0.2));
-  for (const sg of [-1, 1]) { const d = box(0.95, 2.25, 0.08, mat('#dfe8f1'), sg * 0.475, 1.22, 0.84); d.add(box(0.07, 1.6, 0.1, mat('blue'), -sg * 0.42, 0, 0)); d.add(box(0.3, 0.06, 0.1, glowMat(), 0, 0.45, 0)); d.name = 'door' + sg; d.userData.x0 = d.position.x; door.add(d); }
-  const dl = box(0.7, 0.12, 0.1, new THREE.MeshStandardMaterial({ color: C.glow, emissive: C.glow, emissiveIntensity: 1.6 }), 0, 2.55, 0.84); dl.name = 'doorlamp'; door.add(dl);
+  // шлюз — как вход в модуль: короткий тамбур, арочная стена с раздвижными створками
+  const door = new THREE.Group(); door.name = 'dome_door'; door.position.set(Math.cos(doorA) * (r - 0.25), 0, Math.sin(doorA) * (r - 0.25)); door.rotation.y = -doorA + Math.PI / 2; door.scale.setScalar(0.8); g.add(door);
+  { const TW = 2.5, TL = 1.1, front = makeWall('door', 'pad', TW); front.position.z = TL; door.add(front);
+    for (const x of [-1, 1]) { door.add(box(0.18, Y1 - Y0, TL, hullMat(), x * (TW / 2 - 0.09), (Y0 + Y1) / 2, TL / 2)); door.add(box(0.05, 1.0, TL - 0.3, frostMat(false), x * (TW / 2 + 0.005), 1.5, TL / 2)); door.add(box(0.06, Y1 - Y0 - 0.6, 0.06, glowMat(), x * (TW / 2 + 0.03), (Y0 + Y1) / 2, TL - 0.06)); }
+    door.add(box(TW + 0.3, 0.22, TL + 0.3, mat('#ffffff'), 0, Y1 + 0.11, TL / 2)); door.add(box(TW + 0.32, 0.05, TL + 0.32, glowMat(C.glow, 2.0), 0, Y1 - 0.02, TL / 2));
+    door.add(box(TW + 0.1, 0.06, TL + 0.1, mat('#82ccff'), 0, Y1 + 0.25, TL / 2));
+    door.add(box(TW - 0.2, 0.08, TL, gridMat(), 0, Y0 + 0.04, TL / 2)); door.add(box(TW + 0.2, 1.6, TL, mat('navy'), 0, Y0 - 0.8, TL / 2)); }
+  for (const sg of [-1, 1]) { const d = door.getObjectByName('door' + sg); if (d) d.name = 'door' + sg; }
   return g;
 }
 

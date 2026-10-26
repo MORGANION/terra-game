@@ -228,7 +228,9 @@ export class Builder {
   dome(r, door, docks = []) { return this.kit() === 'ice' ? makeIceDome(r, door, docks, domeH(r)) : makeDome(r, door, docks); }
   // Смена темы: пересобрать купола и модули новым конструктором
   rekit() { for (const D of this.domes) this.refreshDome(D); for (const m of this.g.state.modules) this.spawnModule(m, false); }
-  buildModule(m, sides, footY) { if (this.kit() === 'ice') return makeIceModule(m.id, sides, footY); return this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, sides, footY) : makeModule(m.id, sides, footY); }
+  // Вариант обстановки: по порядку постройки среди модулей того же типа (новый модуль — следующий вариант)
+  variantOf(m) { const list = this.g.state.modules.filter(q => q.id === m.id); let i = list.indexOf(m); if (i < 0) i = list.length; return i % 4; }
+  buildModule(m, sides, footY) { if (this.kit() === 'ice') return makeIceModule(m.id, sides, footY, this.variantOf(m)); return this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, sides, footY) : makeModule(m.id, sides, footY); }
   spawnModule(m, fresh) {
     const k = this.mkey(m), old = this.mobjs.get(k); if (old) this.g.scene.remove(old);
     const [lo] = this.groundRange(m);
@@ -396,7 +398,7 @@ export class Builder {
       const m = this.modTarget(), P = this.P[m.id], why = this.modOk(m);
       if (why) { this.g.ui.toast('Сюда нельзя: ' + why, 'warn'); return false; }
       if (!this.g.take(P.cost)) { this.g.ui.toast('Не хватает ресурсов', 'warn'); return false; }
-      delete m.lo; delete m.hi; delete m.cx; delete m.cz; delete m._D; this.g.state.modules.push(m); this.spawnModule(m, true); this.refreshAround(m);
+      delete m.lo; delete m.hi; delete m.cx; delete m.cz; delete m._D; this.g.state.modules.push(m); this.spawnModule(m, true); this.refreshAround(m); this.g.relocateNodes?.();
       if (m.dock) { this.refreshDome(this.domeOfDock(m)); this.g.ui.toast('Модуль пристыкован к куполу — проход открыт'); }
       this.g.qa.event('house', { id: m.id, dock: !!m.dock }); this.g.life?.quest('build', 1); this.g.save();
       if (!this.g.has(P.cost)) { this.cancel(); this.g.ui.toast('Ресурсы на модуль кончились'); }
@@ -458,6 +460,14 @@ export class Builder {
       if (angDiff(Math.atan2(dz, dx), D.door) < 0.75 / D.r) continue;                    // проём шлюза
       if (this.docksOf(D).some(a => angDiff(Math.atan2(dz, dx), a) < (DOOR_W / 2 - 0.3) / D.r)) continue;   // проём стыковки с модулем
       const R = was < D.r ? D.r - 0.5 : D.r + 0.5; pos.x = D.x + dx / d * R; pos.z = D.z + dz / d * R; }
+    // Мебель модулей: AABB в осях модуля (кровать, стол, грядки — не проходим насквозь)
+    for (const [, o] of this.mobjs) { const S = o.userData.solids; if (!S?.length) continue; const m = o.userData.m; if (py < m.y - 0.5 || py > m.y + MH) continue;
+      const dx = pos.x - o.position.x, dz = pos.z - o.position.z; if (dx * dx + dz * dz > 9) continue; const ry = o.rotation.y, c = Math.cos(ry), sn = Math.sin(ry), r = 0.32;
+      let lx = dx * c - dz * sn, lz = dx * sn + dz * c;
+      for (const [x0, z0, x1, z1, top] of S) { if (py > m.y + top - 0.05) continue; if (lx < x0 - r || lx > x1 + r || lz < z0 - r || lz > z1 + r) continue;
+        const pl = lx - (x0 - r), pr = (x1 + r) - lx, pb = lz - (z0 - r), pf = (z1 + r) - lz, mn = Math.min(pl, pr, pb, pf);
+        if (mn === pl) lx = x0 - r; else if (mn === pr) lx = x1 + r; else if (mn === pb) lz = z0 - r; else lz = z1 + r; }
+      pos.x = o.position.x + lx * c + lz * sn; pos.z = o.position.z - lx * sn + lz * c; }
     for (const [x1, z1, x2, z2, bot, top] of this.msegs) { if (py > top || py < bot - 1.5) continue;
       const dx = x2 - x1, dz = z2 - z1, l2 = dx * dx + dz * dz, t = Math.max(0, Math.min(1, ((pos.x - x1) * dx + (pos.z - z1) * dz) / l2));
       const cx = x1 + t * dx, cz = z1 + t * dz, ex = pos.x - cx, ez = pos.z - cz, d = Math.hypot(ex, ez), r = 0.42;
