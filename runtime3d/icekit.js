@@ -146,17 +146,34 @@ export function makeFloor() {
   return g;
 }
 // Потолок-крыша: плита, гранёная светло-голубая «пирамида» (как на промо), бирюзовые кромки, вентблок и антенны
-export function makeRoof(glass = false, antennas = true) {
-  const g = new THREE.Group();
-  g.add(box(M + 0.12, 0.2, M + 0.12, mat('hull'), 0, Y1 + 0.1, 0));
-  const pyr = mesh(new THREE.CylinderGeometry(1.25, (M + 0.1) / Math.SQRT2, 0.6, 4, 1), glass ? frostMat(false) : mat('roof'), 0, Y1 + 0.5, 0); pyr.rotation.y = Math.PI / 4; g.add(pyr);
-  if (glass) { const fr = mesh(new THREE.CylinderGeometry(1.27, (M + 0.12) / Math.SQRT2, 0.62, 4, 1, true), mat('blue', { wireframe: true }), 0, Y1 + 0.5, 0); fr.rotation.y = Math.PI / 4; g.add(fr); }
-  for (const [w, d, x, z] of [[M + 0.14, 0.06, 0, M / 2 + 0.06], [M + 0.14, 0.06, 0, -M / 2 - 0.06], [0.06, M + 0.14, M / 2 + 0.06, 0], [0.06, M + 0.14, -M / 2 - 0.06, 0]]) g.add(box(w, 0.06, d, glowMat(), x, Y1 + 0.17, z));
-  g.add(box(1.2, 0.5, 1.2, glass ? mat('blue') : mat('hull'), 0, Y1 + 1.05, 0));
-  if (!glass) g.add(box(0.7, 0.24, 0.04, mat('dark'), 0, Y1 + 1.05, 0.62));
-  if (antennas) { g.add(mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.3, 5), mat('dark'), 0.35, Y1 + 1.95, -0.3)); g.add(mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.8, 5), mat('dark'), -0.3, Y1 + 1.7, -0.35));
-    g.add(mesh(new THREE.SphereGeometry(0.07, 6, 4), glowMat(), 0.35, Y1 + 2.62, -0.3)); }
-  // кольцевая лампа под потолком
+// Крыша как на промо набора: пологая четырёхскатная усечённая пирамида со свесом, белый карниз,
+// на площадке белый вентблок с тёмными жалюзи и две тёмные антенны разной высоты со светлыми навершиями. Оранжерея — такая же.
+// Пирамида крыши с разным свесом по сторонам (у соседних модулей свес к соседу = 0, чтобы крыши не налезали)
+function hipGeo(o, TOP, RH, y0) {   // o = [−z, +x, +z, −x] свесы
+  const x0 = -M / 2 - o[3], x1 = M / 2 + o[1], z0 = -M / 2 - o[0], z1 = M / 2 + o[2], t = TOP / 2, y1 = y0 + RH;
+  const B = [[x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]], U = [[-t, y1, -t], [t, y1, -t], [t, y1, t], [-t, y1, t]], pos = [];
+  for (let k = 0; k < 4; k++) { const a = B[k], b = B[(k + 1) % 4], c = U[(k + 1) % 4], d = U[k]; pos.push(...a, ...d, ...c, ...a, ...c, ...b); }
+  pos.push(...U[0], ...U[3], ...U[2], ...U[0], ...U[2], ...U[1]);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return { g, B, U };
+}
+// Крыша как на промо набора: пологая голубая четырёхскатная усечённая пирамида со свесом, белый карниз,
+// на площадке белый вентблок с тёмными жалюзи и две тёмные антенны разной высоты со светлыми навершиями. Оранжерея — такая же.
+export function makeRoof(glass = false, antennas = true, seed = 0, open = [false, false, false, false]) {
+  const g = new THREE.Group(), OV = 0.2, RH = 1.3, TOP = 1.4, o = open.map(v => v ? 0 : OV);
+  g.add(box(M + 0.04, 0.16, M + 0.04, mat('hull'), 0, Y1 + 0.08, 0));                                                   // плита перекрытия
+  { const w = M + o[1] + o[3], d = M + o[0] + o[2]; g.add(box(w, 0.26, d, mat('#ffffff', { emissive: '#ffffff', emissiveIntensity: 0.15 }), (o[1] - o[3]) / 2, Y1 + 0.2, (o[2] - o[0]) / 2)); g.add(box(w + 0.01, 0.05, d + 0.01, glowMat(C.glow, 2.4), (o[1] - o[3]) / 2, Y1 + 0.05, (o[2] - o[0]) / 2)); }   // белый карниз-свес
+  const H = hipGeo(o, TOP, RH, Y1 + 0.3); g.add(mesh(H.g, mat('#82ccff', { emissive: '#3a8fd8', emissiveIntensity: 0.28, roughness: 0.45 })));
+  const top = Y1 + 0.3 + RH;
+  for (let k = 0; k < 4; k++) { const a = new THREE.Vector3(...H.B[k]), b = new THREE.Vector3(...H.U[k]), L = a.distanceTo(b), r = box(0.05, L, 0.05, mat('#b8e2ff'), 0, 0, 0); r.position.copy(a).add(b).multiplyScalar(0.5); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); g.add(r); }
+  g.add(box(TOP, 0.06, TOP, mat('#9fd0f5'), 0, top + 0.03, 0));                                 // площадка
+  // вентблок с жалюзи
+  const vb = 1.35, vh = 0.55, vy = top + 0.14 + vh / 2; g.add(box(TOP * 0.92, 0.08, TOP * 0.92, mat('#ffffff'), 0, top + 0.1, 0)); g.add(box(vb, vh, vb * 0.85, mat('#ffffff', { emissive: '#ffffff', emissiveIntensity: 0.12 }), 0, vy, 0)); g.add(box(vb + 0.04, 0.05, vb * 0.85 + 0.04, mat('#ffffff'), 0, vy + vh / 2 + 0.02, 0));
+  for (const sg of [-1, 1]) { g.add(box(vb * 0.62, vh * 0.6, 0.03, mat('#2b3542'), 0, vy, sg * (vb * 0.425 + 0.01)));
+    for (let k = 0; k < 4; k++) g.add(box(vb * 0.6, 0.025, 0.035, mat('#5a6a7c'), 0, vy - vh * 0.22 + k * vh * 0.15, sg * (vb * 0.425 + 0.02))); }
+  if (antennas) { const hs = [[0.9, 1.35], [1.45, 1.05], [1.25, 0.8]][seed % 3];
+    for (const [k, h] of hs.entries()) { const x = k ? -0.38 : 0.38, z = 0, y0 = vy + vh / 2;
+      g.add(mesh(new THREE.CylinderGeometry(0.045, 0.06, h, 6), mat('#2a2f38'), x, y0 + h / 2, z)); g.add(mesh(new THREE.SphereGeometry(0.11, 10, 8), mat('#ffffff', { emissive: '#cfefff', emissiveIntensity: 0.9 }), x, y0 + h + 0.06, z)); } }
+  // изнутри: кольцевая лампа и плафон под потолком
   const ring = mesh(new THREE.TorusGeometry(0.55, 0.045, 5, 24), glowMat(C.glow, 2), 0, Y1 - 0.12, 0); ring.rotation.x = Math.PI / 2; ring.castShadow = false; g.add(ring);
   g.add(box(0.7, 0.03, 0.7, mat(C.warm, { emissive: '#fff0d0', emissiveIntensity: 1.2 }), 0, Y1 - 0.02, 0));
   return g;
@@ -206,7 +223,7 @@ export function makeIceModule(id, sides, footY) {
   const fd = Math.max(0.3, footY);
   for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const l = makeLeg(fd); l.position.set(a * 1.45, -0.35, b * 1.45); g.add(l); }
   for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const p = makePost(); p.position.set(a * M / 2, 0, b * M / 2); p.rotation.y = Math.atan2(a, b); g.add(p); }
-  const roof = makeRoof(green, !green); roof.name = 'roof'; g.add(roof);
+  const roof = makeRoof(false, true, (id === 'm_glass' ? 2 : 0) + (sides.filter(k => k === 'open').length), sides.map(k => k === 'open')); roof.name = 'roof'; g.add(roof);
   const props = { window: ['bunk', 'desk'], port: ['desk', 'bunk'] };
   sides.forEach((k, s) => {
     if (k === 'open') return;
@@ -273,7 +290,7 @@ export function iceKitShowcase() {
   for (const k of ['plain', 'window', 'port', 'door']) { const w = makeWall(k, 'pad'); w.add(makeProp(['bunk', 'desk', 'shelf', 'shelf'][['plain', 'window', 'port', 'door'].indexOf(k)])); w.position.x = x + M / 2; w.rotation.y = Math.PI; row2.add(w); x += M + 0.8; }
   row2.position.z = -7; g.add(row2);
   const row3 = new THREE.Group(); x = 0;
-  for (const o of [makeFloor(), makeRoof(false), makeRoof(true, false), makePost()]) { o.position.x = x + M / 2; row3.add(o); x += M + 1.2; }
+  for (const o of [makeFloor(), makeRoof(false), makeRoof(false, true, 1), makePost()]) { o.position.x = x + M / 2; row3.add(o); x += M + 1.2; }
   row3.position.z = 7; g.add(row3);
   return g;
 }
