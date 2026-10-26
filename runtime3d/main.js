@@ -181,6 +181,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) clock.getDelta(); });
   let frames = 0, fpsT = performance.now();
   const shadowFollow = new THREE.Vector3();
+  const shadowAxes = (() => { const w = new THREE.Vector3(40, 80, 30).normalize(), u = new THREE.Vector3(0, 1, 0).cross(w).normalize(), v = w.clone().cross(u).normalize(); return { u, v, w }; })();
   function frame() {
     requestAnimationFrame(frame);
     // Время симуляции = реальное (до 0.25 с за кадр), шаги по 1/30 — на слабом устройстве игра не «замедляется»
@@ -197,7 +198,10 @@ async function boot() {
       game.update(dt);
     }
     // Тень следует за игроком
-    shadowFollow.copy(player.pos);
+    // Привязка к сетке текселей карты теней в осях света: иначе при ходьбе края теней «плывут» и дрожат (рамы на стекле, перила)
+    { const L = shadowAxes, sc = world.sun.shadow.camera, tx = (sc.right - sc.left) / world.sun.shadow.mapSize.x, P = player.pos;
+      const u = Math.round(P.dot(L.u) / tx) * tx, v = Math.round(P.dot(L.v) / tx) * tx, w = P.dot(L.w);
+      shadowFollow.copy(L.u).multiplyScalar(u).addScaledVector(L.v, v).addScaledVector(L.w, w); }
     world.sun.position.set(shadowFollow.x + 40, shadowFollow.y + 80, shadowFollow.z + 30);
     world.sun.target.position.copy(shadowFollow);
     world.sky.position.copy(camera.position); world.updateTerrain(camera.position);

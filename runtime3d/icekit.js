@@ -12,7 +12,8 @@ const C = { hull: '#eef3f8', hull2: '#d5e1ec', blue: '#2a78cf', navy: '#1f3e66',
 const cache = {};
 const mat = (k, o = {}) => (cache[k + JSON.stringify(o)] ??= new THREE.MeshStandardMaterial({ color: C[k] || k, roughness: 0.75, flatShading: true, ...o }));
 const glowMat = (c = C.glow, i = 1.8) => mat(c, { emissive: c, emissiveIntensity: i });
-const mesh = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; return o; };
+// Прозрачное (стекло, иней) тени не принимает и не отбрасывает: иначе на стекле «акне» теней — полосы дрожат, когда мимо ходит герой
+const mesh = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); const tr = [].concat(m).some(q => q.transparent); o.castShadow = o.receiveShadow = !tr; if (tr) o.renderOrder = 2; return o; };
 const box = (w, h, d, m, x, y, z) => mesh(new THREE.BoxGeometry(w, h, d), m, x, y, z);
 
 // ---------- Текстуры (canvas): обшивка снаружи, стёганая обивка внутри, решётка пола, иней на стекле ----------
@@ -61,7 +62,7 @@ function frostTex(round) {
       x.fillStyle = `rgba(255,255,255,${(0.35 - e) * 1.6})`; const r0 = 0.6 + rnd() * 1.6; x.beginPath(); x.arc(u * s, v * s, r0, 0, 7); x.fill(); }
   });
 }
-const frostMat = round => (cache['frost' + round] ??= new THREE.MeshStandardMaterial({ color: '#ffffff', map: frostTex(round), transparent: true, roughness: 0.12, metalness: 0.1, side: THREE.DoubleSide, depthWrite: false, emissive: '#3a7fb0', emissiveIntensity: 0.12 }));
+const frostMat = round => (cache['frost' + round] ??= new THREE.MeshStandardMaterial({ polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1, color: '#ffffff', map: frostTex(round), transparent: true, roughness: 0.12, metalness: 0.1, side: THREE.DoubleSide, depthWrite: false, emissive: '#3a7fb0', emissiveIntensity: 0.12 }));
 const hullMat = () => (cache.hullT ??= new THREE.MeshStandardMaterial({ color: '#ffffff', map: hullTex(), roughness: 0.7, flatShading: true }));
 const padMat = () => (cache.padT ??= new THREE.MeshStandardMaterial({ color: '#ffffff', map: padTex(), roughness: 0.95 }));
 const gridMat = () => (cache.gridT ??= new THREE.MeshStandardMaterial({ color: '#ffffff', map: gridTex(), roughness: 0.6, metalness: 0.3 }));
@@ -109,10 +110,10 @@ export function makeWall(kind, interior = 'pad', L = M) {
   g.add(box(L, 0.07, 0.04, glowMat(), 0, Y1 - 0.18, DE + 0.02));
   // рамы и стекло окон
   for (const o of ops) {
-    if (o.k === 'round') { const fr = new THREE.Shape(); circ(fr, o.cx, o.cy, o.w / 2 + 0.14); fr.holes.push(circ(new THREE.Path(), o.cx, o.cy, o.w / 2)); g.add(mesh(extrude(fr, 0.32), mat('blue'), 0, 0, -0.15));
+    if (o.k === 'round') { const fr = new THREE.Shape(); circ(fr, o.cx, o.cy, o.w / 2 + 0.14); fr.holes.push(circ(new THREE.Path(), o.cx, o.cy, o.w / 2 - 0.035)); g.add(mesh(extrude(fr, 0.32), mat('blue'), 0, 0, -0.15));
       const gl = mesh(new THREE.CircleGeometry(o.w / 2, 24), frostMat(true), o.cx, o.cy, 0.02); gl.castShadow = false; g.add(gl);
       g.add(box(0.12, 0.05, 0.03, glowMat(), o.cx, o.cy + o.w / 2 + 0.24, DE + 0.03)); }
-    else { const fr = new THREE.Shape(); rrect(fr, o.cx, o.cy, o.w + 0.26, o.h + 0.26, 0.4); fr.holes.push(rrect(new THREE.Path(), o.cx, o.cy, o.w, o.h, 0.3)); g.add(mesh(extrude(fr, 0.32), mat('blue'), 0, 0, -0.15));
+    else { const fr = new THREE.Shape(); rrect(fr, o.cx, o.cy, o.w + 0.26, o.h + 0.26, 0.4); fr.holes.push(rrect(new THREE.Path(), o.cx, o.cy, o.w - 0.07, o.h - 0.07, 0.27)); g.add(mesh(extrude(fr, 0.32), mat('blue'), 0, 0, -0.15));
       const gl = mesh(new THREE.PlaneGeometry(o.w, o.h), frostMat(false), o.cx, o.cy, 0.02); gl.castShadow = false; g.add(gl);
       // переплёт (как на промо: одна вертикальная стойка у больших окон)
       if (o.w > 2.8) g.add(box(0.1, o.h, 0.14, mat('blue'), o.cx, o.cy, 0.02)); }
@@ -120,7 +121,7 @@ export function makeWall(kind, interior = 'pad', L = M) {
   // шлюз / стыковка: U-рамка арки
   if (kind === 'door' || kind === 'dock') {
     const deep = kind === 'dock' ? 1.0 : 0.42;
-    if (kind === 'door') g.add(mesh(extrude(archFrame(DOOR_W, DOOR_W + ARCH_O, yt, yt), deep), mat('blue'), 0, 0, -0.15));
+    if (kind === 'door') g.add(mesh(extrude(archFrame(DOOR_W - 0.06, DOOR_W + ARCH_O, yt, yt), deep), mat('blue'), 0, 0, -0.15));
     for (const x of [-1, 1]) g.add(box(0.08, 1.2, 0.04, glowMat(), x * (DOOR_W / 2 + 0.3), Y0 + 1.0, DE + 0.03));
   }
   if (kind === 'door') {
@@ -217,7 +218,7 @@ export function makeIceModule(id, sides, footY) {
     if (k === 'dock') { g.add(box(Math.abs(a) ? 1.7 : DOOR_W + 0.3, 0.14, Math.abs(b) ? 1.7 : DOOR_W + 0.3, gridMat(), a * 2.75, 0.2, b * 2.75));
       const t = new THREE.Group(); t.position.set(a * M / 2, 0, b * M / 2); t.rotation.y = Math.atan2(a, b); g.add(t);   // рукав: вдоль своей +z, от стены модуля к куполу
       const LEN = 1.3;   // стена модуля → поверхность купола (0.7) + заход под стекло
-      t.add(mesh(extrude(archFrame(DOOR_W, DOOR_W + ARCH_O, ARCH_Y, ARCH_Y), LEN), mat('blue'), 0, 0, -0.12));
+      t.add(mesh(extrude(archFrame(DOOR_W - 0.06, DOOR_W + ARCH_O, ARCH_Y, ARCH_Y), LEN), mat('blue'), 0, 0, -0.12));
       const shell = archFrame(DOOR_W + ARCH_O, DOOR_W + ARCH_O + 0.24, ARCH_Y, ARCH_Y); t.add(mesh(extrude(shell, LEN - 0.3), mat('hull'), 0, 0, 0.03));
       t.add(box(DOOR_W + ARCH_O + 0.5, 1.6, LEN - 0.3, mat('navy'), 0, Y0 - 0.8, 0.03 + (LEN - 0.3) / 2));   // юбка под рукавом до грунта
       for (const zz of [0.1, 0.62]) t.add(mesh(extrude(archFrame(DOOR_W + ARCH_O + 0.22, DOOR_W + ARCH_O + 0.34, ARCH_Y, ARCH_Y), 0.08), glowMat(), 0, 0, zz)); }
