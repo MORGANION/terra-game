@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 
 export const KIT = { M: 4, MH: 3, DOOR_W: 1.6, T: 0.2 };
+const ARCH_Y = 0.2 + 1.6, ARCH_O = 0.36;   // свод ниже карниза стены: арка рукава не вылезает над модулем   // начало свода и ширина рамы арки — одна на стену, рукав и портал купола
 const { M, MH, DOOR_W } = KIT;
 const Y0 = 0.2, Y1 = MH + 0.2;   // низ и верх стены
 
@@ -93,7 +94,7 @@ function openings(kind) {
 // kind: 'plain' | 'window' | 'port' | 'big' | 'door' | 'dock'; interior: 'pad' (жилой) | 'green' (оранжерея)
 export function makeWall(kind, interior = 'pad', L = M) {
   const g = new THREE.Group(), DE = 0.12, DI = 0.08;
-  const yt = Y0 + 1.95, ops = openings(kind);
+  const yt = ARCH_Y, ops = openings(kind);
   let shape;
   if (kind === 'door' || kind === 'dock') shape = archWall(L, DOOR_W, yt);
   else { shape = new THREE.Shape(); shape.moveTo(-L / 2, Y0); shape.lineTo(L / 2, Y0); shape.lineTo(L / 2, Y1); shape.lineTo(-L / 2, Y1); shape.closePath();
@@ -102,7 +103,8 @@ export function makeWall(kind, interior = 'pad', L = M) {
   g.add(mesh(extrude(shape, DE), hullMat(), 0, 0, 0));
   const inner = mesh(extrude(shape, DI), interior === 'green' ? mat('#dfe9f2') : padMat(), 0, 0, -DI); g.add(inner);
   // снаружи: синий цоколь, бирюзовая полоса под карнизом
-  g.add(box(L, 0.3, 0.05, mat('navy'), 0, Y0 + 0.15, DE + 0.025));
+  if (kind === 'door' || kind === 'dock') { for (const x of [-1, 1]) g.add(box((L - DOOR_W - ARCH_O) / 2, 0.3, 0.05, mat('navy'), x * (L + DOOR_W + ARCH_O) / 4, Y0 + 0.15, DE + 0.025)); }
+  else g.add(box(L, 0.3, 0.05, mat('navy'), 0, Y0 + 0.15, DE + 0.025));
   for (const x of [-1, 1]) g.add(box(L / 2 - (kind === 'door' || kind === 'dock' ? DOOR_W / 2 + 0.35 : 0.2), 0.06, 0.03, glowMat(), x * (L / 4 + (kind === 'door' || kind === 'dock' ? DOOR_W / 4 + 0.17 : 0.1)), Y0 + 0.36, DE + 0.04));
   g.add(box(L, 0.07, 0.04, glowMat(), 0, Y1 - 0.18, DE + 0.02));
   // рамы и стекло окон
@@ -118,7 +120,7 @@ export function makeWall(kind, interior = 'pad', L = M) {
   // шлюз / стыковка: U-рамка арки
   if (kind === 'door' || kind === 'dock') {
     const deep = kind === 'dock' ? 1.0 : 0.42;
-    g.add(mesh(extrude(archFrame(DOOR_W, DOOR_W + 0.36, yt, yt), deep), mat('blue'), 0, 0, kind === 'dock' ? -0.12 : -0.15));
+    if (kind === 'door') g.add(mesh(extrude(archFrame(DOOR_W, DOOR_W + ARCH_O, yt, yt), deep), mat('blue'), 0, 0, -0.15));
     for (const x of [-1, 1]) g.add(box(0.08, 1.2, 0.04, glowMat(), x * (DOOR_W / 2 + 0.3), Y0 + 1.0, DE + 0.03));
   }
   if (kind === 'door') {
@@ -160,7 +162,7 @@ export function makeRoof(glass = false, antennas = true) {
 }
 export function makePost() {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, Y1 - Y0 + 0.2, 6), mat('blue'), 0, (Y0 + Y1) / 2, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, Y1 - Y0 + 0.2, 6), mat('hull2'), 0, (Y0 + Y1) / 2, 0));   // светлые: не рисуют синюю «квадратную раму» вокруг арки
   g.add(box(0.07, Y1 - Y0 - 0.6, 0.07, glowMat(), 0, (Y0 + Y1) / 2, 0.19));
   return g;
 }
@@ -212,11 +214,13 @@ export function makeIceModule(id, sides, footY) {
     const kind = k === 'wall' ? (green ? 'big' : s % 2 ? 'port' : 'window') : k;
     w.add(makeWall(kind, green ? 'green' : 'pad'));
     if (k === 'wall') w.add(makeProp(green ? 'plants' : props[kind][s >> 1]));
-    if (k === 'dock') { g.add(box(Math.abs(a) ? 1.3 : DOOR_W + 0.3, 0.14, Math.abs(b) ? 1.3 : DOOR_W + 0.3, gridMat(), a * 2.5, 0.2, b * 2.5));
-      const t = new THREE.Group(); t.position.set(a * (M / 2 + 0.3), 0, b * (M / 2 + 0.3)); t.rotation.y = Math.atan2(a, b); g.add(t);   // рукав: вдоль своей +z
-      const hH = 2.75; for (const x of [-1, 1]) { t.add(box(0.2, hH - Y0, 0.6, mat('hull'), x * (DOOR_W / 2 + 0.2), (hH + Y0) / 2, 0)); }
-      t.add(box(DOOR_W + 0.6, 0.24, 0.6, mat('hull'), 0, hH + 0.12, 0)); t.add(box(DOOR_W + 0.64, 0.06, 0.62, mat('roof'), 0, hH + 0.27, 0));
-      for (const zz of [0]) { const ring = box(DOOR_W + 0.62, 0.08, 0.1, glowMat(), 0, hH + 0.02, zz); t.add(ring); for (const x of [-1, 1]) t.add(box(0.08, hH - Y0, 0.1, glowMat(), x * (DOOR_W / 2 + 0.3), (hH + Y0) / 2, zz)); } }
+    if (k === 'dock') { g.add(box(Math.abs(a) ? 1.7 : DOOR_W + 0.3, 0.14, Math.abs(b) ? 1.7 : DOOR_W + 0.3, gridMat(), a * 2.75, 0.2, b * 2.75));
+      const t = new THREE.Group(); t.position.set(a * M / 2, 0, b * M / 2); t.rotation.y = Math.atan2(a, b); g.add(t);   // рукав: вдоль своей +z, от стены модуля к куполу
+      const LEN = 1.3;   // стена модуля → поверхность купола (0.7) + заход под стекло
+      t.add(mesh(extrude(archFrame(DOOR_W, DOOR_W + ARCH_O, ARCH_Y, ARCH_Y), LEN), mat('blue'), 0, 0, -0.12));
+      const shell = archFrame(DOOR_W + ARCH_O, DOOR_W + ARCH_O + 0.24, ARCH_Y, ARCH_Y); t.add(mesh(extrude(shell, LEN - 0.3), mat('hull'), 0, 0, 0.03));
+      t.add(box(DOOR_W + ARCH_O + 0.5, 1.6, LEN - 0.3, mat('navy'), 0, Y0 - 0.8, 0.03 + (LEN - 0.3) / 2));   // юбка под рукавом до грунта
+      for (const zz of [0.1, 0.62]) t.add(mesh(extrude(archFrame(DOOR_W + ARCH_O + 0.22, DOOR_W + ARCH_O + 0.34, ARCH_Y, ARCH_Y), 0.08), glowMat(), 0, 0, zz)); }
   });
   return g;
 }
@@ -242,7 +246,7 @@ export function makeIceDome(r, doorA, docks = [], H = 0.62) {
   for (let k = 0; k < 12; k++) { const q = new THREE.Group(); q.add(new THREE.Mesh(new THREE.TorusGeometry(r + 0.02, 0.075, 4, 20, Math.PI / 2), rib)); q.rotation.y = k / 12 * TAU; q.scale.set(1, H, 1); q.position.y = 0.45; shell.add(q); }
   for (const e of [0.4, 0.75]) { const rr = r * Math.cos(Math.asin(e)), t = new THREE.Mesh(new THREE.TorusGeometry(rr + 0.02, e > 0.5 ? 0.07 : 0.05, 4, 36), e > 0.5 ? rib : glowMat(C.glow, 1.6)); t.rotation.x = Math.PI / 2; t.position.y = 0.45 + r * e * H; shell.add(t); }
   for (const a of docks) { const pr = new THREE.Group(); pr.position.set(Math.cos(a) * (r - 0.05), 0, Math.sin(a) * (r - 0.05)); pr.rotation.y = -a + Math.PI / 2; shell.add(pr);
-    pr.add(mesh(extrude(archFrame(DOOR_W + 0.1, DOOR_W + 0.6, Y0 + 2.0, Y0 + 2.0), 0.5), mat('blue'), 0, 0, -0.25)); pr.add(box(DOOR_W + 0.7, 0.07, 0.52, glowMat(), 0, Y0 + 2.0 + DOOR_W / 2 + 0.3, 0)); }
+    pr.add(mesh(extrude(archFrame(DOOR_W + ARCH_O, DOOR_W + ARCH_O + 0.3, ARCH_Y, ARCH_Y), 0.3), mat('blue'), 0, 0, -0.15)); }
   const capY = 0.45 + r * H;
   shell.add(mesh(new THREE.CylinderGeometry(0.7, 0.95, 0.35, 8), mat('hull'), 0, capY, 0));
   shell.add(mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.05, 8), glowMat(), 0, capY + 0.1, 0));

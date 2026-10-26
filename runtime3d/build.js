@@ -161,6 +161,9 @@ function makeDome(r, doorA, docks = []) {
   const dl = box(0.7, 0.12, 0.1, mat('#5cd6a8', { emissive: '#5cd6a8', emissiveIntensity: 1.6 }), 0, 2.6, 0.84); dl.name = 'doorlamp'; door.add(dl);
   return g;
 }
+// Призрак постройки: полупрозрачные копии материалов (материал может быть массивом), подсветка «можно/нельзя»
+function ghostify(o) { o.traverse(c => { if (!c.isMesh) return; const one = m => { m = m.clone(); m.transparent = true; m.opacity = Math.min(m.opacity ?? 1, 0.5); m.depthWrite = false; return m; }; c.material = Array.isArray(c.material) ? c.material.map(one) : one(c.material); c.castShadow = false; }); }
+function ghostTint(o, ok) { o.traverse(c => { if (!c.isMesh) return; for (const m of Array.isArray(c.material) ? c.material : [c.material]) m.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); }); }
 const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
 export class Builder {
@@ -255,7 +258,7 @@ export class Builder {
     let best = null, bd = Infinity;
     for (const D of this.domes) { const d = Math.hypot(ax - D.x, az - D.z); if (d < D.r + 7 && d - D.r < bd) { bd = d - D.r; best = D; } }
     if (!best) return null;
-    const D = best, step = Math.PI / 12, a0 = Math.round(Math.atan2(az - D.z, ax - D.x) / step) * step, dc = D.r + 2.3;
+    const D = best, step = Math.PI / 12, a0 = Math.round(Math.atan2(az - D.z, ax - D.x) / step) * step, dc = D.r + (this.kit() === 'ice' ? 2.7 : 2.3);   // ледяной набор: видимый арочный рукав 0.7 м
     // ближайший свободный угол (±60°): призрак сам съезжает с мебели/шлюза
     let a = a0; for (const k of [0, 1, -1, 2, -2, 3, -3, 4, -4]) if (!this.dockWhy(D, a0 + k * step)) { a = a0 + k * step; break; }
     a = Math.atan2(Math.sin(a), Math.cos(a));
@@ -340,7 +343,7 @@ export class Builder {
     if (P.recipe) { const r = this.g.cfg.recipes.find(x => x.id === P.recipe); if (!r || !this.g.take(this.g.costOf(r))) { this.g.ui.toast('Не хватает ресурсов', 'warn'); return false; } this.cancel(); this.g.startPlacing(r, this.g.costOf(r)); return true; }
     this.cancel();
     const ghost = P.kind === 'module' || P.kind === 'dome' ? new THREE.Group() : makePiece(id);
-    ghost.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.5; c.castShadow = false; } });
+    ghostify(ghost);
     this.g.scene.add(ghost);
     this.mode = { id, rot: 0, ghost };
     this.g.placing = { builder: true }; // UI показывает «Поставить/Отмена»
@@ -494,22 +497,22 @@ export class Builder {
   update(dt) {
     if (this.mode && this.kind(this.mode.id) === 'dome') {
       const d = this.domeTarget(), key = [Math.round(d.x), Math.round(d.z), d.y, this.mode.rot].join();
-      if (key !== this.mode.gk) { this.mode.gk = key; this.g.scene.remove(this.mode.ghost); const gh = this.dome(d.r, d.door); gh.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.45; c.castShadow = false; } if (c.isLight) c.intensity = 0; });
+      if (key !== this.mode.gk) { this.mode.gk = key; this.g.scene.remove(this.mode.ghost); const gh = this.dome(d.r, d.door); ghostify(gh);
         gh.position.set(d.x, d.y, d.z); this.g.scene.add(gh); this.mode.ghost = gh; this.mode.why = this.domeOk(d); }
-      const ok = !this.mode.why && this.g.has(this.P[this.mode.id].cost); this.mode.ghost.traverse(c => { if (c.isMesh) c.material.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); }); this.mode.ok = ok;
+      const ok = !this.mode.why && this.g.has(this.P[this.mode.id].cost); ghostTint(this.mode.ghost, ok); this.mode.ok = ok;
     } else if (this.mode && this.kind(this.mode.id) === 'module') {
       const m = this.modTarget(), key = [fkey(m.F), m.i, m.j, m.y, m.doors[0], this.mode.id].join();
       if (key !== this.mode.gk) { this.mode.gk = key; this.g.scene.remove(this.mode.ghost); const tmp = { ...m }; this.g.state.modules.push(tmp); const sides = this.sidesOf(tmp); this.g.state.modules.pop();
-        const gh = this.buildModule(m, sides, m.y - m.lo + 0.3); gh.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.5; c.castShadow = false; } });
+        const gh = this.buildModule(m, sides, m.y - m.lo + 0.3); ghostify(gh);
         // Стыковка — светящаяся рамка проёма на стене купола
         if (m.dock) { const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.07, 6, 24), new THREE.MeshBasicMaterial({ color: '#5cd6a8', transparent: true, opacity: 0.9, depthTest: false })); ring.position.set(-M / 2 - 0.35, 1.3, 0); ring.rotation.y = Math.PI / 2; ring.scale.set(1, 1.25, 1); ring.renderOrder = 10; gh.add(ring); }
         gh.position.set(m.cx, m.y, m.cz); gh.rotation.y = -(m.F?.a || 0); this.g.scene.add(gh); this.mode.ghost = gh; this.mode.why = this.modOk(m); this.mode.dock = !!m.dock; }
-      const ok = !this.mode.why && this.g.has(this.P[m.id].cost); this.mode.ghost.traverse(c => { if (c.isMesh) c.material.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); }); this.mode.ok = ok;
+      const ok = !this.mode.why && this.g.has(this.P[m.id].cost); ghostTint(this.mode.ghost, ok); this.mode.ok = ok;
     } else if (this.mode) {
       const p = this.target(), { x, z, rot } = p.x != null ? { x: p.x, z: p.z, rot: p.rot } : this.place(p);
       const gh = this.mode.ghost; gh.position.set(x, this.levelY(p), z); gh.rotation.y = rot;
       const ok = this.canPlace(p) && this.g.has(this.P[p.id].cost);
-      gh.traverse(c => { if (c.isMesh) c.material.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); });
+      ghostTint(gh, ok);
       this.mode.ok = ok;
     }
     for (const b of this.beacons) { const s = b.getObjectByName('spin'); if (s) s.rotation.y += dt * 1.5; const bm = b.getObjectByName('beam'); if (bm) { const st = this.g.explore?.storm || 0; bm.visible = st > 0.05; bm.material.opacity = (0.4 + Math.sin(performance.now() / 400) * 0.1) * Math.min(1, st * 2); } }
