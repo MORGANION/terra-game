@@ -2008,7 +2008,7 @@
         "price": "479 ₽",
         "was": "1 290 ₽",
         "badge": "НОВЫЙ",
-        "img": "shop/bundle_ice.jpg",
+        "img": "shop/bundle_ice.jpg?v=2",
         "accent": "#6cc8ff",
         "once": true,
         "items": [
