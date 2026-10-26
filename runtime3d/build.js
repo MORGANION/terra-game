@@ -2,6 +2,7 @@
 // Детали ставятся с привязкой к сетке перед игроком, крутятся (R / кнопка), снимаются с возвратом ресурсов.
 // Закрытая комната (пол + все 4 стороны + крыша) — герметична: внутри заправка O₂, как в куполе.
 import * as THREE from 'three';
+import { makeIceModule, makeIceDome } from './icekit.js';
 
 const G = 2;            // шаг сетки, м
 const WALL_H = 2.6;     // высота этажа
@@ -182,7 +183,7 @@ export class Builder {
   // ---------- Купола ----------
   addDome(d, fresh) {
     if (d.y == null) { let hi = -Infinity; for (let a = 0; a < 16; a++) for (const k of [0, 0.5, 0.95]) { const an = a / 16 * Math.PI * 2; hi = Math.max(hi, this.g.world.heightAt(d.x + Math.cos(an) * d.r * k, d.z + Math.sin(an) * d.r * k)); } d.y = +hi.toFixed(2); }
-    const o = makeDome(d.r, d.door, this.docksOf(d)); o.position.set(d.x, d.y, d.z); this.g.scene.add(o);
+    const o = this.dome(d.r, d.door, this.docksOf(d)); o.position.set(d.x, d.y, d.z); this.g.scene.add(o);
     const D = { ...d, obj: o, src: d }; this.domes.push(D);
     if (fresh) { o.scale.setScalar(0.01); (this.g.pop ||= []).push({ o, t: 0 }); }
     return D;
@@ -220,7 +221,11 @@ export class Builder {
     return null;
   }
   groundRange(m) { let lo = Infinity, hi = -Infinity; for (let a = 0; a <= 4; a++) for (let b = 0; b <= 4; b++) { const [x, z] = toW(m.F, m.i * M + a, m.j * M + b), h = this.g.world.heightAt(x, z); lo = Math.min(lo, h); hi = Math.max(hi, h); } return [lo, hi]; }
-  buildModule(m, sides, footY) { return this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, sides, footY) : makeModule(m.id, sides, footY); }
+  kit() { return this.g.state.theme === 'ice' && this.g.shop?.hasTheme('ice') ? 'ice' : null; }
+  dome(r, door, docks = []) { return this.kit() === 'ice' ? makeIceDome(r, door, docks, domeH(r)) : makeDome(r, door, docks); }
+  // Смена темы: пересобрать купола и модули новым конструктором
+  rekit() { for (const D of this.domes) this.refreshDome(D); for (const m of this.g.state.modules) this.spawnModule(m, false); }
+  buildModule(m, sides, footY) { if (this.kit() === 'ice') return makeIceModule(m.id, sides, footY); return this.g.models.protos.hab_module ? makeModuleGLB(this.g.models, m.id, sides, footY) : makeModule(m.id, sides, footY); }
   spawnModule(m, fresh) {
     const k = this.mkey(m), old = this.mobjs.get(k); if (old) this.g.scene.remove(old);
     const [lo] = this.groundRange(m);
@@ -234,7 +239,7 @@ export class Builder {
     this.solidsDirty = true; this.msegs = null; this.hiddenFor = null; this.mHidden = null;
   }
   // Перестроить купол (разрывы юбки под стыковки), оболочку/шлюз сохраняем в том же состоянии
-  refreshDome(D) { if (!D) return; const o = makeDome(D.r, D.door, this.docksOf(D)); o.position.copy(D.obj.position); this.g.scene.remove(D.obj); this.g.scene.add(o); D.obj = o; }
+  refreshDome(D) { if (!D) return; const o = this.dome(D.r, D.door, this.docksOf(D)); o.position.copy(D.obj.position); this.g.scene.remove(D.obj); this.g.scene.add(o); D.obj = o; }
   refreshAround(m) { this.spawnModule(m, false); for (let s = 0; s < 4; s++) { const n = this.nbOf(m, s); if (n) this.spawnModule(n, false); } }
   // Стыковка к куполу: модуль встаёт вплотную к стене, сторона −x — проём в купол. Угол — шаг 15°.
   // Почему к куполу D нельзя пристыковаться под углом a (null — можно)
@@ -489,7 +494,7 @@ export class Builder {
   update(dt) {
     if (this.mode && this.kind(this.mode.id) === 'dome') {
       const d = this.domeTarget(), key = [Math.round(d.x), Math.round(d.z), d.y, this.mode.rot].join();
-      if (key !== this.mode.gk) { this.mode.gk = key; this.g.scene.remove(this.mode.ghost); const gh = makeDome(d.r, d.door); gh.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.45; c.castShadow = false; } if (c.isLight) c.intensity = 0; });
+      if (key !== this.mode.gk) { this.mode.gk = key; this.g.scene.remove(this.mode.ghost); const gh = this.dome(d.r, d.door); gh.traverse(c => { if (c.isMesh) { c.material = c.material.clone(); c.material.transparent = true; c.material.opacity = 0.45; c.castShadow = false; } if (c.isLight) c.intensity = 0; });
         gh.position.set(d.x, d.y, d.z); this.g.scene.add(gh); this.mode.ghost = gh; this.mode.why = this.domeOk(d); }
       const ok = !this.mode.why && this.g.has(this.P[this.mode.id].cost); this.mode.ghost.traverse(c => { if (c.isMesh) c.material.emissive?.set(ok ? '#1a6a2a' : '#7a1010'); }); this.mode.ok = ok;
     } else if (this.mode && this.kind(this.mode.id) === 'module') {

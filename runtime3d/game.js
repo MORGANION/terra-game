@@ -310,6 +310,22 @@ export class Game {
     return { left, home, breathable: this.ti() >= this.T.breathable_ti };
   }
   slots() { return this.explore ? this.explore.slots() : this.cfg.player.inventory_slots; }
+  // Дев: тема ice + купол базы + пристыкованная цепочка модулей (жилой, жилой, оранжерея)
+  devIceBase() {
+    const B = this.builder, P = this.player.pos;
+    if (!this.state.baseDome) { const f = P.clone(); this.state.baseDome = { x: f.x + 9, z: f.z, r: 3.75, door: Math.PI }; this.spawnBaseDome(this.state.baseDome, false); }
+    const D = B.domes.find(d => d.starter) || B.domes[0]; if (!D) return;
+    if (!this.state.modules.some(m => m.dock)) {
+      for (const a of [0, Math.PI / 2, -Math.PI / 2, Math.PI * 0.75]) {
+        P.set(D.x + Math.cos(a) * (D.r - 1), D.y + 0.3, D.z + Math.sin(a) * (D.r - 1)); this.player.yaw = Math.atan2(Math.cos(a), Math.sin(a));
+        B.mode = { id: 'm_room', rot: 0, ghost: new THREE.Group() }; const m = B.modTarget(); B.mode = null; if (!m.dock || B.modOk(m)) continue;
+        for (const k of ['lo', 'hi', 'cx', 'cz', '_D']) delete m[k]; this.state.modules.push(m); B.spawnModule(m, true);
+        const m2 = { ...m, i: m.i + 1, doors: [] }; delete m2.dock; this.state.modules.push(m2);
+        const m3 = { ...m2, id: 'm_glass', i: m.i + 2, doors: [1] }; this.state.modules.push(m3);
+        for (const q of [m2, m3]) B.spawnModule(q, true); for (const q of [m, m2, m3]) B.refreshAround(q); B.refreshDome(D); break; }
+    }
+    B.rekit(); B.solidsDirty = true; B.msegs = null; P.set(D.x - D.r - 5, D.y + 0.5, D.z); this.save();
+  }
   // Карман: расходники с use (баллон O₂, аптечка) лежат в заблокированных клетках рюкзака и не занимают обычные слоты
   pocket(k) { return !!this.cfg.items[k]?.use; }
   usedSlots() { return Object.entries(this.state.inv).reduce((s, [k, n]) => s + (this.pocket(k) ? 0 : Math.ceil(n / this.cfg.player.stack)), 0); }

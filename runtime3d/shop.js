@@ -53,6 +53,7 @@ export class Shop {
   }
   // Постройки: по цвету базовой палитры
   paintBuild(obj, T, key) {
+    if (obj.userData.kit) return;
     this.paint(obj, m => { if (!T || !m.color || m.transparent) return null; const slot = MAP[m.color.getHexString()]; return slot && T[slot] ? this.tint(m, T[slot], key + slot) : null; });
   }
   retheme(force) {
@@ -60,6 +61,7 @@ export class Shop {
     const mark = o => { if (!o) return false; if (!force && o.userData.theme === id) return false; o.userData.theme = id; return true; };
     // скафандр и марсоход шейдером НЕ перекрашиваем (выглядит плохо) — только готовые модели наборов
     const B = g.builder; if (!B) return;
+    if (B.kitNow !== B.kit()) { B.kitNow = B.kit(); if (B.kitBuilt) B.rekit(); B.kitBuilt = true; }   // набор со своим конструктором — пересборка
     for (const D of B.domes || []) if (mark(D.obj)) this.paintBuild(D.obj, T, id);
     for (const o of B.mobjs?.values() || []) if (mark(o)) this.paintBuild(o, T, id);
     for (const o of B.objs?.values() || []) if (mark(o)) this.paintBuild(o, T, id);
